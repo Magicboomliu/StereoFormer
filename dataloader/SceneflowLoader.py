@@ -7,7 +7,6 @@ import os
 
 from utils.utils import read_text_lines
 from utils.file_io import read_disp,read_img
-from utils.utils import read_img, read_disp
 from skimage import io, transform
 import numpy as np
 
