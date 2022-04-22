@@ -3,8 +3,6 @@
 # Licensed under the MIT License.
 # Written by RainbowSecret (yhyuan@pku.edu.cn)
 # ------------------------------------------------------------------------------
-import sys
-sys.path.append("../..")
 import os
 import logging
 import torch
