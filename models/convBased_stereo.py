@@ -28,17 +28,14 @@ class HRNet_Stereo(nn.Module):
         left_feature = self.feature_fusion(left_feature)
         right_feature = self.feature_fusion(right_feature)
         
+        '''ACVNet : Attention Cost Volume'''
         # Cost Volume Building
         
         # Cost Volume Aggregation
         
         # 1/4 disp disparity
-        
-        
-        
-        
+                
         return left_feature,right_feature
-
 
 
 class ConcatHead(nn.Module):
