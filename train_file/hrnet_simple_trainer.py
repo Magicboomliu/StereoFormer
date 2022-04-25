@@ -19,6 +19,7 @@ from dataloader import transforms
 
 # Load Network Here
 from models.convBased_stereo import HRNet_Stereo
+from models.transformerBased_stereo import Swin_Stereo
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -94,7 +95,13 @@ class DisparityTrainer(object):
         # Build the Network architecture according to the model name
         if self.model == 'HRNet': 
             self.net= HRNet_Stereo(max_disp=192,pretrain=False,
-                                   use_feature_fusion=True,use_concated_volume=True)
+                                   use_feature_fusion=True,use_concated_volume=True,backbone='hrnet')
+        elif self.model=='Swin_t':
+            self.net = Swin_Stereo(max_disp=192,pretrain=False,
+                                   use_feature_fusion=True,use_concated_volume=True,backbone='swin_t')
+        else:
+            raise NotImplementedError
+    
         self.is_pretrain = False
         if self.ngpu > 1:
             self.net = torch.nn.DataParallel(self.net, device_ids=self.devices).cuda()

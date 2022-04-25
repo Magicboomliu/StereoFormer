@@ -18,7 +18,7 @@ testbatch=1
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/HRNet_GWc
-model=HRNet
+model=Swin_t
 pretrain=none
 
 python3 -W ignore train.py --cuda --loss $loss --lr $lr \
