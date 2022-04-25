@@ -7,7 +7,8 @@ import sys
 sys.path.append("../")
 
 
-def EPE_Loss(disp_infer,disp_gt,mask):
+def EPE_Loss(disp_infer,disp_gt):
+    mask = (disp_gt>0) & (disp_gt<192)
     disp_infer = disp_infer[mask]
     disp_gt = disp_gt[mask]
     return F.l1_loss(disp_infer,disp_gt,size_average=True)

@@ -138,14 +138,15 @@ class HRNet_Stereo(nn.Module):
             cost3 = torch.squeeze(cost3, 1)
             pred3 = F.softmax(cost3, dim=1)
             pred3 = disparity_regression(pred3, self.max_disp)
-            return [pred3, pred2, pred1, pred0]
+            
+            return [pred3.unsqueeze(1), pred2.unsqueeze(1), pred1.unsqueeze(1), pred0.unsqueeze(1)]
         else:
             cost3 = self.classif3(out3)
             cost3 = F.upsample(cost3, [self.max_disp, left.size()[2], left.size()[3]], mode='trilinear')
             cost3 = torch.squeeze(cost3, 1)
             pred3 = F.softmax(cost3, dim=1)
             pred3 = disparity_regression(pred3, self.max_disp)
-            return [pred3]
+            return [pred3.unsqueeze(1)]
             
 
 

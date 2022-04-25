@@ -1,0 +1,63 @@
+2022-04-25 15:03:43,178 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:03:43,178 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:04:16,152 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:04:16,153 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:04:16,191 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:09:15,126 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:09:15,126 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:09:15,140 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:09:15,349 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:09:17,365 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:09:17,377 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:09:17,377 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:09:17,377 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:09:17,380 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:13:23,184 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:13:23,184 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:13:23,396 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:13:23,609 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:13:25,621 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:13:25,633 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:13:25,633 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:13:25,633 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:13:25,636 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:15:04,668 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:15:04,668 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:15:04,683 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:15:04,891 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:15:06,937 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:15:06,949 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:15:06,950 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:15:06,950 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:15:06,953 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:17:30,938 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:17:30,938 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:17:30,956 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:17:31,165 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:17:33,184 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:17:33,199 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:17:33,199 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:17:33,199 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:17:33,202 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:20:11,172 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:20:11,172 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:20:11,211 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:20:11,419 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:20:13,431 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:20:13,443 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:20:13,443 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:20:13,443 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:20:13,446 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:21:54,794 [train.py:123] INFO Configurations: Namespace(augment=0, batch_size=1, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/HRNet_GWc', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='HRNet', momentum=0.9, net='simplenet', outf='models_saved/HRNet_GWc', pretrain='none', save_logdir='experiments_logdir/HRNet_GWc', showFreq=100, startEpoch=0, startRound=0, test_batch=1, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-04-25 15:21:54,794 [train.py:127] INFO Random Seed: 1024
+2022-04-25 15:21:54,812 [train.py:31] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-04-25 15:21:55,022 [hrnet_simple_trainer.py:82] INFO Use 4 processes to load data...
+2022-04-25 15:21:57,041 [hrnet_simple_trainer.py:107] INFO Initial a new model...
+2022-04-25 15:21:57,054 [train.py:56] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-04-25 15:21:57,054 [train.py:57] INFO num of epoches: 70
+2022-04-25 15:21:57,054 [train.py:58] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-04-25 15:21:57,057 [hrnet_simple_trainer.py:165] INFO learning rate of epoch 0: 0.001000.
+2022-04-25 15:22:03,945 [hrnet_simple_trainer.py:210] INFO this is round 0
+2022-04-25 15:22:03,946 [hrnet_simple_trainer.py:217] INFO Epoch: [0][0/35454]	Time 6.889 (6.889)	Data 0.152 (0.152)	Loss 245.925 (245.925)	EPE 80.261 (80.261)	
+2022-04-25 15:22:21,572 [hrnet_simple_trainer.py:210] INFO this is round 0
+2022-04-25 15:22:21,572 [hrnet_simple_trainer.py:217] INFO Epoch: [0][10/35454]	Time 1.761 (2.229)	Data 0.001 (0.014)	Loss 61.353 (120.577)	EPE 19.467 (38.397)	
