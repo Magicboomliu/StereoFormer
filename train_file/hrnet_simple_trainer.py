@@ -14,6 +14,9 @@ from dataloader.preprocess import scale_disp
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 
+# Load Network Here
+from models.convBased_stereo import HRNet_Stereo
+
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
