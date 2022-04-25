@@ -612,7 +612,7 @@ class SwinTransformer(nn.Module):
 
 if __name__=="__main__":
     
-    input_img_sample = torch.randn(1,3,320,640).cuda()
+    input_img_sample = torch.randn(1,3,224,224).cuda()
     
     
     swinformer = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,

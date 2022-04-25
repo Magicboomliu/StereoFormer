@@ -1,10 +1,10 @@
-import imp
 import sys
 sys.path.append("../")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.backbone.hrnet import hrnet18
+from models.backbone.swinformer import SwinTransformer
 from models.residual.resnet import ResBlock
 from utils.devtools import print_tensor_shape
 from models.submodule import convbn,hourglass3d,build_concat_volume,build_gwc_volume,convbn_3d,disparity_regression
@@ -12,17 +12,24 @@ import math
 
 class HRNet_Stereo(nn.Module):
     def __init__(self,max_disp=192,
+                 backbone='hrnet',
                  pretrain=False,
                  use_feature_fusion=False,
                  use_concated_volume=False):
         super(HRNet_Stereo,self).__init__()
         
+        self.backbone = backbone
         self.max_disp = max_disp
         self.use_feature_fusion = use_feature_fusion
         self.use_concated_volume = use_concated_volume
         
         # Feature Extraction
-        self.encoder = hrnet18(pretrained=pretrain,progress=False)
+        if self.backbone=='hrnet':
+            self.encoder = hrnet18(pretrained=pretrain,progress=False)
+        elif self.backbone=='swin_former':    
+            self.encoder =None
+        else:
+            raise NotImplementedError
         
         if self.use_feature_fusion:
             # Feature Fusion
