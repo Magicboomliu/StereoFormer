@@ -17,9 +17,10 @@ from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 
 
-# Load Network Here
-from models.convBased_stereo import HRNet_Stereo
-from models.transformerBased_stereo import Swin_Stereo
+# Load Network Here: 3D convilution based method
+from models.ThreeD.convBased_stereo import HRNet_Stereo
+from models.ThreeD.transformerBased_stereo import Swin_Stereo
+
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
