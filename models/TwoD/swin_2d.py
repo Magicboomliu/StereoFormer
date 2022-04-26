@@ -29,10 +29,21 @@ class Cost_Volume_Aggregation(nn.Module):
 
         # Cross Scale Cost Volume Aggregation
         '''All fuse to 1/4 Scale and 1/8 Scale'''
-        
-        
-        
-            
+        for i in range(len(len(self.branches))):
+            self.fusion_branches.append(nn.ModuleList())
+            for j in range(self.cost_volume_len):
+                if i==j:
+                    self.fusion_branches[-1].append(nn.Identity())
+                # incoming cost volume is smaller than current cost volume
+                elif i<j:
+                    self.fusion_branches[-1].append(
+                    nn.Sequential(nn.Conv2d(self.max_disp // (2 ** j), self.max_disp // (2 ** i),kernel_size=1, bias=False),
+                                      nn.BatchNorm2d(self.max_disp // (2 ** i))))
+                # incoming cost volume is bigger than current cost volume
+                elif i>j:
+                    
+                    pass
+                        
     def forward(self,cost_volume_list):
         after_cost_volume_list =[]
         for idx, cost_volume in enumerate(cost_volume_list):
