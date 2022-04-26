@@ -29,20 +29,20 @@ class Cost_Volume_Aggregation(nn.Module):
 
         # Cross Scale Cost Volume Aggregation
         '''All fuse to 1/4 Scale and 1/8 Scale'''
-        for i in range(len(len(self.branches))):
-            self.fusion_branches.append(nn.ModuleList())
-            for j in range(self.cost_volume_len):
-                if i==j:
-                    self.fusion_branches[-1].append(nn.Identity())
-                # incoming cost volume is smaller than current cost volume
-                elif i<j:
-                    self.fusion_branches[-1].append(
-                    nn.Sequential(nn.Conv2d(self.max_disp // (2 ** j), self.max_disp // (2 ** i),kernel_size=1, bias=False),
-                                      nn.BatchNorm2d(self.max_disp // (2 ** i))))
-                # incoming cost volume is bigger than current cost volume
-                elif i>j:
-                    
-                    pass
+        # 1/8 Scale branch
+        self.upsample32_8 = nn.Sequential(
+            nn.Conv2d(self.max_disp//8,self.max_disp//2,1,bias=False),
+            nn.BatchNorm2d(self.max_disp),     
+         )
+        self.upsample16_8 = nn.Sequential(
+            nn.Conv2d(self.max_disp//4,self.max_disp//2,1,bias=False),
+            nn.BatchNorm2d(self.max_disp), 
+        )
+        self.downsample4_8 = nn.Sequential(
+            nn.Conv2d(self.max_disp,self.max_disp,stride=2,kernel_size=3,padding=1,bias=False),
+            nn.BatchNorm2d(self.max_disp//2),
+            nn.LeakyReLU(0.2,inplace=True)
+        )
                         
     def forward(self,cost_volume_list):
         after_cost_volume_list =[]
