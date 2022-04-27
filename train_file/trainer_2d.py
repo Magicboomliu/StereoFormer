@@ -17,8 +17,10 @@ from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 
 # Load Network Here: 2D convilution based method
-from models.TwoD.stereonet_swin import StereoNet
-from models.TwoD.stereonet_hrnet import StereoNet_HR
+# from models.TwoD.stereonet_swin import StereoNet
+# from models.TwoD.stereonet_hrnet import StereoNet_HR
+from models.TwoD.ednet_hrnet import Hrnet_EDNet
+from models.TwoD.ednet_swin import Swin_T_EDNet
 
 
 # ImageNet Normalization
@@ -94,9 +96,10 @@ class DisparityTrainer(object):
     def _build_net(self):
         # Build the Network architecture according to the model name
         if self.model == 'HRNet': 
-            self.net= StereoNet_HR()
+            self.net = Hrnet_EDNet(max_disp=192,res_type='attention',squeezed_volume=True)
         elif self.model=='Swin_t':
-            self.net = StereoNet()
+            self.net= Swin_T_EDNet(max_disp=192,res_type='attention',squeezed_volume=True)
+            
         else:
             raise NotImplementedError
     
