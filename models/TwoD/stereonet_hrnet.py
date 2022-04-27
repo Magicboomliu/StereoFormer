@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.devtools import print_tensor_shape
-from models.backbone.swinformer import SwinTransformer
+from models.backbone.hrnet import hrnet18
 
 # left -right
 def make_cost_volume(left, right, max_disp):
@@ -78,7 +78,7 @@ class Concated_Head(nn.Module):
         super(Concated_Head,self).__init__()
         self.select_res = select_res
         self.downsample = nn.Sequential(
-            nn.Conv2d(1440,128,3,1,1,bias=False),
+            nn.Conv2d(270,128,3,1,1,bias=False),
             nn.BatchNorm2d(128),
             nn.GELU()
         )
@@ -104,20 +104,14 @@ class Concated_Head(nn.Module):
         
 
 
-class StereoNet(nn.Module):
+class StereoNet_HR(nn.Module):
     def __init__(self):
         super().__init__()
         self.k = 3
         self.align = 2 ** self.k
         self.max_disp = (192 + 1) // (2 ** self.k)
         # Swin-Former Tiny
-        self.feature_extractor = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,
-                                 depths=[2,2,6,2],
-                                 num_heads=[3,6,12,24],
-                                 window_size=7,
-                                 mlp_ratio=4,
-                                 qkv_bias=True,
-                                 qk_scale=None)
+        self.feature_extractor = hrnet18(False,False)
         self.feature_fusion = Concated_Head(select_res='1/8')
         
         self.cost_filter = nn.Sequential(
@@ -186,7 +180,7 @@ if __name__ == "__main__":
 
     left = torch.rand(1, 3, 320, 640)
     right = torch.rand(1, 3, 320, 640)
-    model = StereoNet()
+    model = StereoNet_HR()
     
     output = model(left,right,False)
     # print(output['disp'].shape)

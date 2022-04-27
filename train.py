@@ -9,7 +9,8 @@ import shutil
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from utils.common import *
-from train_file.trainer_3d import DisparityTrainer
+# from train_file.trainer_3d import DisparityTrainer
+from train_file.trainer_2d import DisparityTrainer
 from losses.multi_disp_loss import multiscaleloss
 from torch.utils.tensorboard import SummaryWriter
 
