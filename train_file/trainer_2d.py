@@ -250,7 +250,7 @@ class DisparityTrainer(object):
                 
                 start_time = time.perf_counter()
                 # Get the predicted disparity
-                output,conf_infer = self.net(left_input, right_input,False)
+                output= self.net(left_input, right_input,False)
 
                 inference_time += time.perf_counter() - start_time
                 img_nums += left_input.shape[0]
