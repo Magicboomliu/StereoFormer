@@ -47,8 +47,8 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=1
-testbatch=1
+batchSize=8
+testbatch=4
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/Swin_stereoNet
@@ -82,7 +82,7 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=1
+batchSize=4
 testbatch=1
 maxdisp=-1
 model=none
@@ -103,6 +103,6 @@ python3 -W ignore train.py --cuda --loss $loss --lr $lr \
                --pretrain $pretrain   
 }
 
-HRNet_StereoNet_Sf
-#Swin_T_StereoNet_Sf
+# HRNet_StereoNet_Sf
+Swin_T_StereoNet_Sf
 # HRNet_GWc_Sf
