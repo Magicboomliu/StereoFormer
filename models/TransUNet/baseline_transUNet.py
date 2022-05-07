@@ -1,3 +1,4 @@
+from turtle import right
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,6 +10,9 @@ from models.TransUNet.disp_residual import *
 from models.backbone.swinformer import BasicLayer,PatchMerging
 from timm.models.layers import trunc_normal_
 from torch.nn.init import kaiming_normal
+
+
+
 
 class LinearEmbedding(nn.Module):
     def __init__(self,input_dim,embedd_dim,norm_layer=None,use_proj=True):
@@ -37,8 +41,6 @@ class LinearEmbedding(nn.Module):
             
         return x
 
-
-
 class TransUNetStereo(nn.Module):
     def __init__(self,swin_former_depths=[4,6,2],
                         numbers_of_head=[4,8,8],
@@ -62,7 +64,6 @@ class TransUNetStereo(nn.Module):
         # How many Transformer Stages
         self.num_layers = len(self.swin_former_depths)
         
-        print("Numbers of the Stages ",self.num_layers)
         # Basic Feature Extraction
         self.conv1 = conv(3, 64, 7, 2)                      # 1/2
         self.conv2 = ResBlock(64, 128, stride=2)            # 1/4
@@ -105,6 +106,10 @@ class TransUNetStereo(nn.Module):
             
         self._freeze_stages()
         
+        self.transformer_concated = TransformerConcated([embedd_dim,embedd_dim*2,embedd_dim*4])
+        
+        self.cnn_transformer_fusion_3 = ResBlock(n_in=128+256,n_out=128,kernel_size=3,stride=1)
+        
         # weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv3d):
@@ -136,13 +141,7 @@ class TransUNetStereo(nn.Module):
                 for param in m.parameters():
                     param.requires_grad = False
     
-    
-    
-    
-
-                
-        
-        
+         
     def forward(self,left_img,right_img,is_training=True):
         
         '''CNN Blocks: Get 1/2,1/4,1/8 Level Left and Right Feature'''
@@ -154,29 +153,55 @@ class TransUNetStereo(nn.Module):
         conv2_r = self.conv2(conv1_r)
         conv3_r = self.conv3(conv2_r)           # 1/8
         
-        
-        conv3_l_flatten = self.linear_embedding(conv3_l) # Left Linear Embedding
-        conv3_r_flatten = self.linear_embedding(conv3_r) # Right Linear Embedding
+        # Linear Embedding
+        conv3_l_flatten = self.linear_embedding(conv3_l) 
+        conv3_r_flatten = self.linear_embedding(conv3_r) 
         
         # Transformer Feature Saved
         transformer_feature_out_left = []
+        transformer_feature_out_right = []
         # Swin-Former based Feature Aggregation
-        
-        # 1/8 Level Transformer Feature Left
         left_f = conv3_l_flatten
+        right_f = conv3_r_flatten
         Wh, Ww = conv3_l.size(2),conv3_l.size(3)
         
+        # Transformer Aggregation
         for i in range(self.num_layers):
             swin_layer = self.transformer_stages[i]
-            left_out,H,W,left_f,Wh,Ww = swin_layer(left_f,Wh,Ww)
-            
+            left_out,H,W,left_f,new_Wh,new_Ww = swin_layer(left_f,Wh,Ww)
+            right_out,H,W,right_f,new_Wh,new_Ww = swin_layer(right_f,Wh,Ww)
+            Wh = new_Wh
+            Ww = new_Ww
+
             if i in self.out_indices:
                 norm_layer = getattr(self, f'norm{i}')
                 left_out = norm_layer(left_out)
                 left_out = left_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
-                transformer_feature_out_left.append(left_out)
+                right_out = norm_layer(right_out)
+                right_out = right_out.view(-1,H,W,self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                 
-        print_tensor_shape(transformer_feature_out_left)
+                transformer_feature_out_left.append(left_out)
+                transformer_feature_out_right.append(right_out)
+        
+        # Transformer Feature Fusion
+        transformer_feature_out_left = list(reversed(transformer_feature_out_left))
+        transformer_feature_out_right = list(reversed(transformer_feature_out_right))
+        aggregated_left_18 = self.transformer_concated(transformer_feature_out_left)
+        aggregated_right_18 = self.transformer_concated(transformer_feature_out_right)
+        
+        # Recover the resolution
+        feature_1_8_l = torch.cat((conv3_l,aggregated_left_18),dim=1)
+        feature_1_8_r = torch.cat((conv3_r,aggregated_right_18),dim=1)
+        
+        cnn_transformer_fusion3_l = self.cnn_transformer_fusion_3(feature_1_8_l)
+        cnn_transformer_fusion3_r = self.cnn_transformer_fusion_3(feature_1_8_r)
+        
+        #TODO 
+        '''Self-Attention Or Cross Attention Disparity Estimation'''
+        
+        
+        
+
         
 
 
