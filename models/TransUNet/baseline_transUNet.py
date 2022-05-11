@@ -10,8 +10,8 @@ from models.TransUNet.disp_residual import *
 from models.backbone.swinformer import BasicLayer,PatchMerging
 from timm.models.layers import trunc_normal_
 from torch.nn.init import kaiming_normal
-
-
+from models.TransUNet.build_cost_volume import CostVolume
+from models.TransUNet.estimation import DisparityEstimation
 
 
 class LinearEmbedding(nn.Module):
@@ -54,9 +54,11 @@ class TransUNetStereo(nn.Module):
                         drop_rate=0.,
                         out_indices=(0, 1, 2),
                         frozen_stages=-1,
-                        use_checkpoint=False) -> None:
+                        use_checkpoint=False,
+                        cost_volume_type='correlation') -> None:
         super(TransUNetStereo,self).__init__()
         
+        self.cost_volume_type = cost_volume_type
         self.swin_former_depths = swin_former_depths
         self.numbers_of_head = numbers_of_head
         self.out_indices = out_indices
@@ -110,6 +112,13 @@ class TransUNetStereo(nn.Module):
         
         self.cnn_transformer_fusion_3 = ResBlock(n_in=128+256,n_out=128,kernel_size=3,stride=1)
         
+        # 1/8 Scale Cost Volume
+        self.low_scale_cost_volume = CostVolume(max_disp=192//8,feature_similarity=self.cost_volume_type)
+        
+        # 1/8 Scale Disparity Estimation
+        self.disp_estimation3 = DisparityEstimation(max_disp=192//8,match_similarity=True) 
+        
+    
         # weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv3d):
@@ -196,16 +205,18 @@ class TransUNetStereo(nn.Module):
         cnn_transformer_fusion3_l = self.cnn_transformer_fusion_3(feature_1_8_l)
         cnn_transformer_fusion3_r = self.cnn_transformer_fusion_3(feature_1_8_r)
         
-        #TODO 
-        '''Self-Attention Or Cross Attention Disparity Estimation'''
+        # Correlation Cost Volume Here 1/8 : Searching Range is 24
+        low_scale_cost_volume3 = self.low_scale_cost_volume(cnn_transformer_fusion3_l,cnn_transformer_fusion3_r)
+        
+        low_scale_disp3 = self.disp_estimation3(low_scale_cost_volume3)
+        
+        assert low_scale_disp3.min()>=0
         
         
+        return low_scale_disp3.unsqueeze(1)
         
 
-        
 
-
-        
 
 
 if __name__=="__main__":
@@ -213,5 +224,6 @@ if __name__=="__main__":
     right_image = torch.randn(1,3,320,640).cuda()
     
     transUnet = TransUNetStereo().cuda()
-    transUnet(left_image,right_image,True)
+    output = transUnet(left_image,right_image,True)
     
+    print(output.shape)
