@@ -158,7 +158,7 @@ class TransUNetStereo(nn.Module):
         conv2_l = self.conv2(conv1_l)           # 128 1/4
         conv3_l = self.conv3(conv2_l)           # 256 1/8
 
-        conv1_r = self.conv1(right_image)
+        conv1_r = self.conv1(right_img)
         conv2_r = self.conv2(conv1_r)
         conv3_r = self.conv3(conv2_r)           # 1/8
         
@@ -215,8 +215,6 @@ class TransUNetStereo(nn.Module):
         
         return low_scale_disp3.unsqueeze(1)
         
-
-
 
 
 if __name__=="__main__":
