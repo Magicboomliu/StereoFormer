@@ -12,6 +12,7 @@ from timm.models.layers import trunc_normal_
 from torch.nn.init import kaiming_normal
 from models.TransUNet.build_cost_volume import CostVolume
 from models.TransUNet.estimation import DisparityEstimation
+from models.TransUNet.GWcCostVolume import GroupWiseCorrelationCostVolume
 
 
 class LinearEmbedding(nn.Module):
@@ -112,11 +113,15 @@ class TransUNetStereo(nn.Module):
         
         self.cnn_transformer_fusion_3 = ResBlock(n_in=128+256,n_out=128,kernel_size=3,stride=1)
         
+        match_similarity = True
         # 1/8 Scale Cost Volume
-        self.low_scale_cost_volume = CostVolume(max_disp=192//8,feature_similarity=self.cost_volume_type)
-        
+        if self.cost_volume_type in ['correlation','concated']:
+            self.low_scale_cost_volume = CostVolume(max_disp=192//8,feature_similarity=self.cost_volume_type)
+        elif self.cost_volume_type in ['group_wise_correlation']:
+            self.low_scale_cost_volume = GroupWiseCorrelationCostVolume(max_disp=192//8,groups=16,is_concated=True)
+    
         # 1/8 Scale Disparity Estimation
-        self.disp_estimation3 = DisparityEstimation(max_disp=192//8,match_similarity=True) 
+        self.disp_estimation3 = DisparityEstimation(max_disp=192//8,match_similarity=match_similarity) 
         
     
         # weight initialization
@@ -221,7 +226,7 @@ if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    transUnet = TransUNetStereo().cuda()
+    transUnet = TransUNetStereo(cost_volume_type='group_wise_correlation').cuda()
     output = transUnet(left_image,right_image,True)
     
     print(output.shape)
