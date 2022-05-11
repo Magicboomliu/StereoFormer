@@ -1,4 +1,3 @@
-from turtle import right
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -220,7 +219,6 @@ class TransUNetStereo(nn.Module):
         
         return low_scale_disp3.unsqueeze(1)
         
-
 
 if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()

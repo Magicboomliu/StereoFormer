@@ -16,6 +16,7 @@ from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.TransUNet.baseline_transUNet import TransUNetStereo
+from models.TwoD.simple_2d_low import LowCNN
 
 
 # ImageNet Normalization
@@ -25,7 +26,7 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 class DisparityTrainer(object):
     def __init__(self, lr, devices, dataset, trainlist, vallist, datapath, 
                  batch_size, maxdisp,use_deform=False, pretrain=None, 
-                        model='TransUnet', test_batch=4):
+                        model='LowCNN', test_batch=4):
         super(DisparityTrainer, self).__init__()
         
         self.lr = lr
@@ -90,9 +91,8 @@ class DisparityTrainer(object):
         # Build the Network architecture according to the model name
         if self.model == 'TransUnet': 
             self.net = TransUNetStereo(cost_volume_type='correlation')
-        elif self.model=='Swin_t':
-            self.net= None
-            
+        elif self.model=='LowCNN':
+            self.net= LowCNN(cost_volume_type='group_wise_correlation')
         else:
             raise NotImplementedError
         self.is_pretrain = False

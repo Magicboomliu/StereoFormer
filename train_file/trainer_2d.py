@@ -16,9 +16,6 @@ from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 
-# Load Network Here: 2D convilution based method
-# from models.TwoD.stereonet_swin import StereoNet
-# from models.TwoD.stereonet_hrnet import StereoNet_HR
 from models.TwoD.ednet_hrnet import Hrnet_EDNet
 from models.TwoD.ednet_swin import Swin_T_EDNet
 

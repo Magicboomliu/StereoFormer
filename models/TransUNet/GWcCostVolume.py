@@ -69,8 +69,6 @@ class StereoNetAggregation(nn.Module):
 
         return out
 
-
-
 class GroupWiseCorrelationCostVolume(nn.Module):
     def __init__(self,max_disp,groups,is_concated=False):
         super(GroupWiseCorrelationCostVolume,self).__init__()
