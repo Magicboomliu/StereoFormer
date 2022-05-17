@@ -127,7 +127,7 @@ if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='group_wise_correlation').cuda()
+    lowCNN = LowCNN(cost_volume_type='correlation').cuda()
     output = lowCNN(left_image,right_image,True)
     
     print(output.shape)

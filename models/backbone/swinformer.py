@@ -13,6 +13,7 @@ import torch.utils.checkpoint as checkpoint
 import numpy as np
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from utils.devtools import print_tensor_shape
+from collections import OrderedDict
 
 class Mlp(nn.Module):
     """ Multilayer perceptron."""
@@ -611,33 +612,66 @@ class SwinTransformer(nn.Module):
 
         return tuple(outs)
 
-
-if __name__=="__main__":
+def Swin_T(load_pretrain=False,pretrain_path=None,cuda=False):
     
-    input_img_sample = torch.randn(1,3,224,224).cuda()
-    
-    
-    swinformer = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,
+    if cuda:
+        swinformer = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,
+                                 depths=[2,2,6,2],
+                                 num_heads=[3,6,12,24],
+                                 window_size=7,
+                                 mlp_ratio=4,
+                                 qkv_bias=True,
+                                 qk_scale=None)
+    else:
+        swinformer = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,
                                  depths=[2,2,6,2],
                                  num_heads=[3,6,12,24],
                                  window_size=7,
                                  mlp_ratio=4,
                                  qkv_bias=True,
                                  qk_scale=None).cuda()
+    # Loading weight 
+    if load_pretrain:
+        weights_dict = torch.load(pretrain_path)['state_dict']
+        # Delete the decoder head
+        for k in list(weights_dict.keys()):
+            if "head" in k:
+                del weights_dict[k]
+        new_state_dict = OrderedDict()
+        for k,v in weights_dict.items():
+            if "backbone" in k:
+                adaptive_key = k[len("backbone")+1:]
+                new_state_dict[adaptive_key] = v
+        
+        del weights_dict
+
+        print("Loading Swin-Former Pretrained Model: ",swinformer.load_state_dict(new_state_dict, strict=False))
+        
+    return swinformer
+    
+
+
+
+if __name__=="__main__":
+    
+    
+    input_img_sample = torch.randn(1,3,320,640).cuda()
+    pretrained_path = "/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/upernet_swin_tiny_patch4_window7_512x512.pth"
+    model = Swin_T(True,pretrain_path=pretrained_path)
+    output = model(input_img_sample)
+    
+    
+    print_tensor_shape(output)
+    
+    
+    # swinformer = SwinTransformer(pretrain_img_size=224,patch_size=4,in_chans=3,embed_dim=96,
+    #                              depths=[2,2,6,2],
+    #                              num_heads=[3,6,12,24],
+    #                              window_size=7,
+    #                              mlp_ratio=4,
+    #                              qkv_bias=True,
+    #                              qk_scale=None).cuda()
     
     # Load pretrained-weights
-    weights_dict = torch.load("/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/swin_tiny_patch4_window7_224.pth")["model"]
-    
-    # 删除有关分类类别的权重
-    for k in list(weights_dict.keys()):
-        if "head" in k:
-            del weights_dict[k]
-    print(swinformer.load_state_dict(weights_dict, strict=False))
-    
-    
-    output = swinformer(input_img_sample)
-    
-    # print_tensor_shape(output)
-    
-    
+    #weights_dict = torch.load("/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/upernet_swin_tiny_patch4_window7_512x512.pth")['state_dict']
     
