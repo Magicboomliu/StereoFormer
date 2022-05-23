@@ -17,6 +17,7 @@ from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.TransUNet.baseline_transUNet import TransUNetStereo
 from models.TwoD.simple_2d_low import LowCNN
+from models.TwoD.Simple_2d_low_exp import NiNet
 
 
 # ImageNet Normalization
@@ -93,6 +94,8 @@ class DisparityTrainer(object):
             self.net = TransUNetStereo(cost_volume_type='correlation')
         elif self.model=='LowCNN':
             self.net= LowCNN(cost_volume_type='group_wise_correlation')
+        elif self.model =='NiNet':
+            self.net = NiNet(squeezed_volume=True,upsample_type='simple')
         else:
             raise NotImplementedError
         self.is_pretrain = False

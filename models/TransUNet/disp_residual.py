@@ -111,8 +111,7 @@ class TransformerConcated(nn.Module):
                     dim_out = self.ch_list[id+1],
                 )
             )
-        self.conv_end = nn.Conv2d(self.ch_list[-1], 10, kernel_size=1, stride=1, padding=0, bias=False)
-
+ 
     def forward(self, x_list):
 
         out = x_list[0]

@@ -8,6 +8,32 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from utils.disparity_warper import disp_warp
 
+def build_corr(img_left, img_right, max_disp=40):
+    B, C, H, W = img_left.shape
+    volume = img_left.new_zeros([B, max_disp, H, W])
+    for i in range(max_disp):
+        if i > 0:
+            volume[:, i, :, i:] = (img_left[:, :, :, i:] * img_right[:, :, :, :-i]).mean(dim=1)
+        else:
+            volume[:, i, :, :] = (img_left[:, :, :, :] * img_right[:, :, :, :]).mean(dim=1)
+
+    volume = volume.contiguous()
+    return volume
+
+
+def form_cost_volume(ref_feature, tar_feature, disp):
+    B, C, H, W = ref_feature.shape
+    cost = Variable(torch.FloatTensor(B, C*2, disp, H, W).zero_()).cuda()
+    for i in range(disp):
+        if i > 0:
+            cost[:, :C, i, :, i:] = ref_feature[:, :, :, i:]
+            cost[:, C:, i, :, i:] = tar_feature[:, :, :, :-i]
+        else:
+            cost[:, :C, i, :, :] = ref_feature
+            cost[:, C:, i, :, :] = tar_feature
+    cost = cost.contiguous()
+    return cost
+
 # conv3x3 + BN + relu
 def conv(in_planes, out_planes, kernel_size=3, stride=1, batchNorm=False):
     if batchNorm:
@@ -164,6 +190,122 @@ class res_submodule_attention(nn.Module):
 
         res = self.res(conv6) * scale
         return res
+
+
+# Simple ConvGRU
+class ConvGRU(nn.Module):
+    def __init__(self,hidden_dimension=64,input_dimension=128):
+        super(ConvGRU,self).__init__()
+        self.convz = nn.Conv2d(hidden_dimension+input_dimension,hidden_dimension,3,padding=1)
+        self.convr = nn.Conv2d(hidden_dimension+input_dimension,hidden_dimension,3,padding=1)
+        self.convq = nn.Conv2d(hidden_dimension+input_dimension,hidden_dimension,3,padding=1)
+        
+    def forward(self, h, x):
+        hx = torch.cat([h, x], dim=1)
+
+        z = torch.sigmoid(self.convz(hx))
+        r = torch.sigmoid(self.convr(hx))
+        q = torch.tanh(self.convq(torch.cat([r*h, x], dim=1)))
+
+        h = (1-z) * h + z * q
+        return h
+
+# Seprate X Y GRU
+class SepConvGRU(nn.Module):
+    def __init__(self, hidden_dim=128, input_dim=192+128):
+        super(SepConvGRU, self).__init__()
+        self.convz1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
+        self.convr1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
+        self.convq1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
+
+        self.convz2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
+        self.convr2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
+        self.convq2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
+
+
+    def forward(self, h, x):
+        # horizontal
+        hx = torch.cat([h, x], dim=1)
+        # Kept Gate
+        z = torch.sigmoid(self.convz1(hx))
+        # Forget Gate
+        r = torch.sigmoid(self.convr1(hx))
+        
+        # H detlta
+        q = torch.tanh(self.convq1(torch.cat([r*h, x], dim=1)))        
+        h = (1-z) * h + z * q
+
+        # vertical
+        hx = torch.cat([h, x], dim=1)
+        z = torch.sigmoid(self.convz2(hx))
+        r = torch.sigmoid(self.convr2(hx))
+        q = torch.tanh(self.convq2(torch.cat([r*h, x], dim=1)))       
+        h = (1-z) * h + z * q
+
+        return h
+
+
+
+# Residual Update UpSampling
+class ResidualUpdateModule(nn.Module):
+    def __init__(self):
+        super(ResidualUpdateModule,self).__init__()
+        
+    def forward(self,x):
+        ''' 
+        Left feature CNN 
+        Left feature Transformer
+        Corase Disparity
+        Left image / Right Image
+        local Lost volume?
+        
+        '''
+        pass
+
+
+# Basic upsample
+class ConvAffinityUpsample(nn.Module):
+    def __init__(self,input_channels,hidden_channels=128):
+        super(ConvAffinityUpsample,self).__init__()
+        self.upsample_mask = nn.Sequential(
+            nn.Conv2d(in_channels=input_channels,out_channels=hidden_channels,kernel_size=3,padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden_channels,8*8*9,1,padding=0)
+        )
+    
+    def forward(self,feature):
+        
+        mask = .25 * self.upsample_mask(feature)
+        
+        return mask
+
+
+def upsample_convex8(disp, mask):
+    """ Upsample flow field [H/8, W/8, 2] -> [H, W, 2] using convex combination """
+    N, _, H, W = disp.shape
+    mask = mask.view(N, 1, 9, 8, 8, H, W)
+    mask = torch.softmax(mask, dim=2)
+        
+
+    up_disp = F.unfold(8 * disp, [3,3], padding=1)
+        # up_flow: [B,C*kW*kH,L] here with padding the L should be H*W
+        
+    up_disp = up_disp.view(N, 1, 9, 1, 1, H, W)
+
+    up_disp = torch.sum(mask * up_disp, dim=2)
+       
+    up_disp = up_disp.permute(0, 1, 4, 2, 5, 3)
+        
+    return up_disp.reshape(N, 1, 8*H, 8*W)
+
+
+def upsample_simple8(disp, mode='bilinear'):
+    new_size = (8 * disp.shape[2], 8 * disp.shape[3])
+    return  8 * F.interpolate(disp, size=new_size, mode=mode, align_corners=True)
+
+
+
+
 
 
 # Spatial Attention

@@ -15,80 +15,17 @@ def print_tensor_shape(inputs):
             print(value.shape)
     else:
         print(inputs.shape)
-
-def center_crop(layer, max_height, max_width):
-    _, _, h, w = layer.size()
-    xy1 = (w - max_width) // 2
-    xy2 = (h - max_height) // 2
-    return layer[:, :, xy2:(xy2 + max_height), xy1:(xy1 + max_width)]
-
-
-class BaseLayer(nn.Module):
-    def __init__(self, dim_in, dim_out):
-        super().__init__()
-        self.conv = nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn = nn.BatchNorm2d(dim_out)
-        self.relu = nn.GELU()
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        return x
-
-
-class TransformerConcated(nn.Module):
-    def __init__(self,swin_feature_list):
-        super().__init__()
-        self.swin_feature_list = swin_feature_list
-        self.relu = nn.GELU()
-        self.up_sample = nn.UpsamplingBilinear2d(scale_factor=2)
-        self.ch_list = list(reversed(self.swin_feature_list))
         
-        self.layer_list = nn.ModuleList()
-        for id in range(len(self.ch_list) - 1):
-            self.layer_list.append(
-                BaseLayer(
-                    dim_in = self.ch_list[id] + self.ch_list[id+1],
-                    dim_out = self.ch_list[id+1],
-                )
-            )
- 
-    def forward(self, x_list):
-
-        out = x_list[0]
         
-        for id in range(len(self.ch_list) - 1):
-            out = self.up_sample(out)
-            out = torch.cat([out, x_list[id+1]], dim=1)
-            out = self.layer_list[id](out)
-    
-        return out
-
-
-
 class NiNet(nn.Module):
-    def __init__(self, max_disp=192, input_channel=3, res_type='normal',
-                 load_swin_pretrain=False,
-                 swin_transformer_path=None,
-                 squeezed_volume=False):
+    def __init__(self, max_disp=192,
+                 squeezed_volume=False,upsample_type='simple'):
         super(NiNet, self).__init__()
         self.max_disp = max_disp
         self.squeezed_volume = squeezed_volume
-        self.res_type = res_type
-        self.load_swin_pretrain = load_swin_pretrain
-        self.swin_transformer_path = swin_transformer_path
+        self.upsample_type = upsample_type
         
-        # Transformer Branch
-        self.swin_transformer_encoder = Swin_T(load_pretrain=self.load_swin_pretrain,
-                                               pretrain_path=self.swin_transformer_path)
-        
-        # Fixed the transformer Branch
-        for p in self.swin_transformer_encoder.parameters():
-            p.requires_grad = False
-        
-        self.feature_fusion = TransformerConcated(swin_feature_list=[96,192,384,768])
-        
+    
         # Disparity Estimation Branch
         
         self.conv1 = conv(3, 64, 7, 2)                      # 1/2
@@ -136,6 +73,11 @@ class NiNet(nn.Module):
         # disparity estimation
         self.disp3 = nn.Conv2d(128,1,kernel_size=3,stride=1,padding=1,bias=False)
         self.relu3 = nn.ReLU(inplace=True)
+        
+        if self.upsample_type=='simple':
+            pass
+        elif self.upsample_type=='convex':
+            self.upsample_mask = ConvAffinityUpsample(input_channels=128,hidden_channels=128)
 
 
         # weight initialization
@@ -193,34 +135,32 @@ class NiNet(nn.Module):
         upconv3 = self.upconv3(iconv4)      # Upsample to 1/8: 128 1/8
         concat3 = torch.cat((upconv3, conv3b), dim=1)    # 128+256=384 1/8
         iconv3 = self.iconv3(concat3)       # 128
-        
+    
         
         # Get 1/8 Disparity Here
         pr3 = self.disp3(iconv3)
         pr3 = self.relu3(pr3) # Use Simple CNN to do disparity regression
-
-        # Swin-Former feature
-        context_information_list = self.swin_transformer_encoder(img_left)
-        '''[1,96,80,160] ----> 1/4 H
-           [1,192,40,80] ----> 1/8 H
-           [1,384,20,40] ----> 1/16 H
-           [1,768,10,20] ----> 1/32 H'''
-        #[1/4 Size Feature Size]
-        context_feature = self.feature_fusion(context_information_list[::-1])
-        # Use this as the context clue to do non-spatial propagation
         
-        print(context_feature.shape)
+        # Get upsmaple Branch Here
+        
+        if self.upsample_type=='convex':
+            pr3_mask = self.upsample_mask(iconv3)
+            pr0 = upsample_convex8(pr3,pr3_mask)
+        elif self.upsample_type=='simple':
+            pr0 = upsample_simple8(pr3)
+            
+        
+        return pr0
+        
 
 
 if __name__ == '__main__':
     import time
-    pretrained_path = "/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/upernet_swin_tiny_patch4_window7_512x512.pth"
-    model = NiNet(res_type='attention',squeezed_volume=True,load_swin_pretrain=True,
-                  swin_transformer_path=pretrained_path).cuda()
+    #pretrained_path = "/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/upernet_swin_tiny_patch4_window7_512x512.pth"
+    model = NiNet(squeezed_volume=True,upsample_type='convex').cuda()
     input = torch.randn(1, 3, 320, 640).cuda()
     
     
     output = model(input,input,True)
     
-    # print_tensor_shape(output)
-
+    print_tensor_shape(output)
