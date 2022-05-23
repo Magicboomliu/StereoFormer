@@ -150,7 +150,7 @@ class NiNet(nn.Module):
             pr0 = upsample_simple8(pr3)
             
         
-        return pr0
+        return pr3
         
 
 

@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch.nn.init import kaiming_normal
 import torch.nn.functional as F
 import sys
+
+from models.TwoD.disp_residual import ConvAffinityUpsample
 sys.path.append("../..")
 from models.TransUNet.disp_residual import *
 from utils.devtools import print_tensor_shape
@@ -11,7 +13,7 @@ from models.residual.resnet import ResBlock
 from models.TransUNet.build_cost_volume import CostVolume
 from models.TransUNet.estimation import DisparityEstimation
 from models.TransUNet.GWcCostVolume import build_concat_volume,build_gwc_volume,conv3d,StereoNetAggregation
-
+from models.TwoD.disp_residual import upsample_convex8,upsample_simple8
 
 class GroupWiseCorrelationCostVolume(nn.Module):
     def __init__(self,max_disp,groups,is_concated=False):
@@ -44,10 +46,16 @@ class GroupWiseCorrelationCostVolume(nn.Module):
 
 
 class LowCNN(nn.Module):
-    def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation'):
+    def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
+                 upsample_type="simple"):
         super(LowCNN, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
+        self.upsample_type = upsample_type
+        
+        if self.upsample_type:
+            self.upsample_mask = ConvAffinityUpsample(input_channels=256,hidden_channels=128)
+        
         self.conv1 = conv(3, 64, 7, 2)                      # 1/2
         self.conv2 = ResBlock(64, 128, stride=2)            # 1/4
         self.conv3 = ResBlock(128, 256, stride=2)           # 1/8
@@ -116,8 +124,15 @@ class LowCNN(nn.Module):
         
         assert low_scale_disp3.min()>=0
         
+        low_scale_disp3 = low_scale_disp3.unsqueeze(1)
         
-        return low_scale_disp3.unsqueeze(1)
+        if self.upsample_type=='convex':
+            pr3_mask = self.upsample_mask(aggregated_feature_l)
+            pr0 = upsample_convex8(low_scale_disp3,pr3_mask)
+        elif self.upsample_type=='simple':
+            pr0 = upsample_simple8(low_scale_disp3)
+        
+        return pr0
 
 
 

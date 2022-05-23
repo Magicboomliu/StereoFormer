@@ -93,9 +93,9 @@ class DisparityTrainer(object):
         if self.model == 'TransUnet': 
             self.net = TransUNetStereo(cost_volume_type='correlation')
         elif self.model=='LowCNN':
-            self.net= LowCNN(cost_volume_type='group_wise_correlation')
+            self.net= LowCNN(cost_volume_type='group_wise_correlation',upsample_type='convex')
         elif self.model =='NiNet':
-            self.net = NiNet(squeezed_volume=True,upsample_type='simple')
+            self.net = NiNet(squeezed_volume=True,upsample_type='convex')
         else:
             raise NotImplementedError
         self.is_pretrain = False
@@ -193,7 +193,9 @@ class DisparityTrainer(object):
                 flow2_EPE = self.epe(output[0], target_disp)
                 
             else:
-                output = F.interpolate(output,scale_factor=8.0,mode='bilinear',align_corners=False) * 8.0
+                if output.size(-1)!= target_disp.size(-1):
+                    output = F.interpolate(output,scale_factor=8.0,mode='bilinear',align_corners=False) * 8.0
+                
                 assert (output.size(-1) == target_disp.size(-1))
                 flow2_EPE = self.epe(output, target_disp)
 
