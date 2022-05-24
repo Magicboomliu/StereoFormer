@@ -1,0 +1,9 @@
+2022-05-23 22:12:37,624 [train.py:124] INFO Configurations: Namespace(augment=0, batch_size=8, beta=0.999, cuda=True, datapath='/media/zliu/datagrid1/liu/sceneflow', dataset='sceneflow', devices='0', flowDiv=1.0, logFile='logs/ninet_trans', loss='config/loss_config_disp.json', lr=0.001, manualSeed=1024, maxdisp=-1, model='NiNet', momentum=0.9, net='simplenet', outf='models_saved/ninet_trans', pretrain='none', save_logdir='experiments_logdir/ninet_trans', showFreq=100, startEpoch=0, startRound=0, test_batch=8, trainlist='filenames/SceneFlow.list', trainmodel=None, use_deform=False, vallist='filenames/FlyingThings3D_release_TEST.list', workers=8)
+2022-05-23 22:12:37,624 [train.py:128] INFO Random Seed: 1024
+2022-05-23 22:12:37,661 [train.py:32] INFO [[1.0, 0.8, 0.8, 0.6]]
+2022-05-23 22:12:37,850 [trainer_2d.py:83] INFO Use 4 processes to load data...
+2022-05-23 22:12:41,584 [trainer_2d.py:115] INFO Initial a new model...
+2022-05-23 22:12:41,590 [train.py:57] INFO round 0: [1.0, 0.8, 0.8, 0.6]
+2022-05-23 22:12:41,590 [train.py:58] INFO num of epoches: 70
+2022-05-23 22:12:41,590 [train.py:59] INFO epoch	time_stamp	train_loss	train_EPE	EPE	lr
+2022-05-23 22:12:41,591 [trainer_2d.py:173] INFO learning rate of epoch 0: 0.001000.

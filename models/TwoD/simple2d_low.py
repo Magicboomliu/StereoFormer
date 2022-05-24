@@ -108,7 +108,6 @@ class LowCNN(nn.Module):
         
         aggregated_feature_l = self.feature_concated(left_feature_list)
         
-        
         # Right Feature
         feature8_r = self.downsample1(conv3_r) # 1/8 L
         feature16_r = self.downsample2(feature8_r) # 1/16 L
@@ -132,7 +131,6 @@ class LowCNN(nn.Module):
             pr0 = upsample_simple8(low_scale_disp3)
         
         return pr0
-
 
 
 

@@ -645,7 +645,7 @@ def Swin_T(load_pretrain=False,pretrain_path=None,cuda=False):
         
         del weights_dict
 
-        # print("Loading Swin-Former Pretrained Model: ",swinformer.load_state_dict(new_state_dict, strict=False))
+        print("Loading Swin-Former Pretrained Model: ",swinformer.load_state_dict(new_state_dict, strict=False))
         
     return swinformer
     

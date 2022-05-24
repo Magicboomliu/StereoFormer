@@ -18,13 +18,14 @@ from dataloader import transforms
 
 from models.TwoD.ednet_hrnet import Hrnet_EDNet
 from models.TwoD.ednet_swin import Swin_T_EDNet
+from models.TwoD.nitnet_pp import NiNet
 
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
-
+pretrained_path = "/home/zliu/Desktop/Codes/StereoFormer/pretrained/backbone/upernet_swin_tiny_patch4_window7_512x512.pth"
 
 class DisparityTrainer(object):
     def __init__(self, lr, devices, dataset, trainlist, vallist, datapath, 
@@ -96,7 +97,9 @@ class DisparityTrainer(object):
             self.net = Hrnet_EDNet(max_disp=192,res_type='attention',squeezed_volume=True)
         elif self.model=='Swin_t':
             self.net= Swin_T_EDNet(max_disp=192,res_type='attention',squeezed_volume=True)
-            
+        elif self.model =='NiNet':
+            self.net = NiNet(res_type='context_attention',squeezed_volume=True,load_swin_pretrain=True,
+                  swin_transformer_path=pretrained_path,fixed_parameters=True)
         else:
             raise NotImplementedError
     
