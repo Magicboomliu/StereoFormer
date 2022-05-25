@@ -214,8 +214,6 @@ python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
 # HRNet_StereoNet_Sf
 #Swin_T_StereoNet_Sf
 # HRNet_GWc_Sf
-
-# LowCNN
-
-Transs
+LowCNN
+# Transs
 # TransUnet_Low_Scale

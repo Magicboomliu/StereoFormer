@@ -16,7 +16,8 @@ from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.TransUNet.baseline_transUNet import TransUNetStereo
-from models.TwoD.simple_2d_low import LowCNN
+# from models.TwoD.simple_2d_low import LowCNN
+from models.TwoD.stereo import LowCNN
 from models.TwoD.Simple_2d_low_exp import NiNet
 
 
@@ -93,7 +94,7 @@ class DisparityTrainer(object):
         if self.model == 'TransUnet': 
             self.net = TransUNetStereo(cost_volume_type='correlation')
         elif self.model=='LowCNN':
-            self.net= LowCNN(cost_volume_type='group_wise_correlation',upsample_type='convex')
+            self.net= LowCNN(cost_volume_type='correlation',upsample_type='convex')
         elif self.model =='NiNet':
             self.net = NiNet(squeezed_volume=True,upsample_type='convex')
         else:
