@@ -1,3 +1,4 @@
+from random import sample
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,6 +9,7 @@ from models.RAFT_Stereo.extractor import BasicEncoder,MultiBasicEncoder,Residual
 from models.RAFT_Stereo.corr import CorrBlock1D,PytorchAlternateCorrBlock1D,CorrBlockFast1D,AlternateCorrBlock
 from models.RAFT_Stereo.utils import coords_grid,upflow8
 
+from losses.squence_loss import sequence_loss
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -159,51 +161,78 @@ class RAFTStereo(nn.Module):
     
 
 
+class Args(object):
+    def __init__(self,name='raft-stereo',corr_implementation='reg',corr_levels=4,n_downsample=2,
+                 corr_radius=4,
+                 mixed_precision=True,
+                 slow_fast_gru=False,
+                 shared_backbone = False,
+                 n_gru_layers=3,hidden_dims=[128]*3) -> None:
+        self.name = name
+        self.corr_radius = corr_radius
+        self.corr_implementation = corr_implementation
+        self.corr_levels = corr_levels
+        self.n_downsample = n_downsample
+        self.n_gru_layers = n_gru_layers
+        self.hidden_dims = hidden_dims
+        self.shared_backbone = shared_backbone
+        self.mixed_precision = mixed_precision
+        self.slow_fast_gru = slow_fast_gru
+        
 if __name__=="__main__":
-    import argparse
+    # import argparse
     import numpy as np
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--name', default='raft-stereo', help="name your experiment")
-    parser.add_argument('--restore_ckpt', help="restore checkpoint")
-    parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--name', default='raft-stereo', help="name your experiment")
+    # parser.add_argument('--restore_ckpt', help="restore checkpoint")
+    # parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
 
-    # Training parameters
-    parser.add_argument('--batch_size', type=int, default=6, help="batch size used during training.")
-    parser.add_argument('--train_datasets', nargs='+', default=['sceneflow'], help="training datasets.")
-    parser.add_argument('--lr', type=float, default=0.0002, help="max learning rate.")
-    parser.add_argument('--num_steps', type=int, default=100000, help="length of training schedule.")
-    parser.add_argument('--image_size', type=int, nargs='+', default=[320, 720], help="size of the random image crops used during training.")
-    parser.add_argument('--train_iters', type=int, default=16, help="number of updates to the disparity field in each forward pass.")
-    parser.add_argument('--wdecay', type=float, default=.00001, help="Weight decay in optimizer.")
+    # # Training parameters
+    # parser.add_argument('--batch_size', type=int, default=6, help="batch size used during training.")
+    # parser.add_argument('--train_datasets', nargs='+', default=['sceneflow'], help="training datasets.")
+    # parser.add_argument('--lr', type=float, default=0.0002, help="max learning rate.")
+    # parser.add_argument('--num_steps', type=int, default=100000, help="length of training schedule.")
+    # parser.add_argument('--image_size', type=int, nargs='+', default=[320, 720], help="size of the random image crops used during training.")
+    # parser.add_argument('--train_iters', type=int, default=16, help="number of updates to the disparity field in each forward pass.")
+    # parser.add_argument('--wdecay', type=float, default=.00001, help="Weight decay in optimizer.")
 
-    # Validation parameters
-    parser.add_argument('--valid_iters', type=int, default=32, help='number of flow-field updates during validation forward pass')
+    # # Validation parameters
+    # parser.add_argument('--valid_iters', type=int, default=32, help='number of flow-field updates during validation forward pass')
 
-    # Architecure choices
-    parser.add_argument('--corr_implementation', choices=["reg", "alt", "reg_cuda", "alt_cuda"], default="reg", help="correlation volume implementation")
-    parser.add_argument('--shared_backbone', action='store_true', help="use a single backbone for the context and feature encoders")
-    parser.add_argument('--corr_levels', type=int, default=4, help="number of levels in the correlation pyramid")
-    parser.add_argument('--corr_radius', type=int, default=4, help="width of the correlation pyramid")
-    parser.add_argument('--n_downsample', type=int, default=2, help="resolution of the disparity field (1/2^K)")
-    parser.add_argument('--slow_fast_gru', action='store_true', help="iterate the low-res GRUs more frequently")
-    parser.add_argument('--n_gru_layers', type=int, default=3, help="number of hidden GRU levels")
-    parser.add_argument('--hidden_dims', nargs='+', type=int, default=[128]*3, help="hidden state and context dimensions")
+    # # Architecure choices
+    # parser.add_argument('--corr_implementation', choices=["reg", "alt", "reg_cuda", "alt_cuda"], default="reg", help="correlation volume implementation")
+    # parser.add_argument('--shared_backbone', action='store_true', help="use a single backbone for the context and feature encoders")
+    # parser.add_argument('--corr_levels', type=int, default=4, help="number of levels in the correlation pyramid")
+    # parser.add_argument('--corr_radius', type=int, default=4, help="width of the correlation pyramid")
+    # parser.add_argument('--n_downsample', type=int, default=2, help="resolution of the disparity field (1/2^K)")
+    # parser.add_argument('--slow_fast_gru', action='store_true', help="iterate the low-res GRUs more frequently")
+    # parser.add_argument('--n_gru_layers', type=int, default=3, help="number of hidden GRU levels")
+    # parser.add_argument('--hidden_dims', nargs='+', type=int, default=[128]*3, help="hidden state and context dimensions")
 
-    # Data augmentation
-    parser.add_argument('--img_gamma', type=float, nargs='+', default=None, help="gamma range")
-    parser.add_argument('--saturation_range', type=float, nargs='+', default=None, help='color saturation')
-    parser.add_argument('--do_flip', default=False, choices=['h', 'v'], help='flip the images horizontally or vertically')
-    parser.add_argument('--spatial_scale', type=float, nargs='+', default=[0, 0], help='re-scale the images randomly')
-    parser.add_argument('--noyjitter', action='store_true', help='don\'t simulate imperfect rectification')
-    args = parser.parse_args()
+    # # Data augmentation
+    # parser.add_argument('--img_gamma', type=float, nargs='+', default=None, help="gamma range")
+    # parser.add_argument('--saturation_range', type=float, nargs='+', default=None, help='color saturation')
+    # parser.add_argument('--do_flip', default=False, choices=['h', 'v'], help='flip the images horizontally or vertically')
+    # parser.add_argument('--spatial_scale', type=float, nargs='+', default=[0, 0], help='re-scale the images randomly')
+    # parser.add_argument('--noyjitter', action='store_true', help='don\'t simulate imperfect rectification')
+    # args = parser.parse_args()
 
     torch.manual_seed(1234)
     np.random.seed(1234)
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
+    args = Args()
     raft_stereo = RAFTStereo(args=args).cuda()
     
     
-    disp = raft_stereo(left_image,right_image)
-
+    disp = raft_stereo(left_image,right_image,test_mode=False)
+    
+    gt_disp = torch.abs(torch.randn(1,1,320,640)).cuda()
+    
+    print(disp[0].shape)
+    print(disp[1].shape)
+    
+    # loss = sequence_loss(disp,gt_disp)
+    
+    # print(loss.item())
