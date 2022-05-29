@@ -122,7 +122,7 @@ class LowCNN(nn.Module):
         self.feature_concated = TransformerConcated(swin_feature_list=[256,512,512])
         match_similarity = True
         
-        self.cost_attention = SA_Module(input_nc=192//8,output_nc=192//8,ndf=192//8)
+        # self.cost_attention = SA_Module(input_nc=192//8,output_nc=192//8,ndf=192//8)
         
         self.correlation_aggregation = nn.Sequential(
             ResBlock(24,24,3,1),
@@ -221,12 +221,12 @@ class LowCNN(nn.Module):
                 cost_out = cost_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
         
         # Cost Volume Adapative Fusion
-        cost_out_attention_trans = self.cost_attention(cost_out)
-        low_scale_cost_volume_attention = self.cost_attention(low_scale_cost_volume3)
+        # cost_out_attention_trans = self.cost_attention(cost_out)
+        # low_scale_cost_volume_attention = self.cost_attention(low_scale_cost_volume3)
         
-        final_cost = (cost_out * cost_out_attention_trans + low_scale_cost_volume3 * low_scale_cost_volume_attention)/(cost_out_attention_trans+low_scale_cost_volume_attention+1e-6)
+        # final_cost = (cost_out * cost_out_attention_trans + low_scale_cost_volume3 * low_scale_cost_volume_attention)/(cost_out_attention_trans+low_scale_cost_volume_attention+1e-6)
         
-        
+        final_cost = cost_out
         low_scale_disp3 = self.disp_estimation3(final_cost)
         
         assert low_scale_disp3.min()>=0
@@ -241,7 +241,6 @@ class LowCNN(nn.Module):
         
         
         return pr0
-
 
 # Spatial Attention
 class SA_Module(nn.Module):
