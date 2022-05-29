@@ -2,7 +2,8 @@ import numpy as np
 from PIL import Image
 from os.path import *
 import re
-
+import json
+import imageio
 import cv2
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
@@ -67,6 +68,20 @@ def readPFM(file):
     data = np.flipud(data)
     return data
 
+def writePFM(file, array):
+    import os
+    assert type(file) is str and type(array) is np.ndarray and \
+           os.path.splitext(file)[1] == ".pfm"
+    with open(file, 'wb') as f:
+        H, W = array.shape
+        headers = ["Pf\n", f"{W} {H}\n", "-1\n"]
+        for header in headers:
+            f.write(str.encode(header))
+        array = np.flip(array, axis=0).astype(np.float32)
+        f.write(array.tobytes())
+
+
+
 def writeFlow(filename,uv,v=None):
     """ Write optical flow to file.
     
@@ -109,9 +124,44 @@ def readFlowKITTI(filename):
 def readDispKITTI(filename):
     disp = cv2.imread(filename, cv2.IMREAD_ANYDEPTH) / 256.0
     valid = disp > 0.0
-    flow = np.stack([-disp, np.zeros_like(disp)], -1)
-    return flow, valid
+    return disp, valid
 
+# Method taken from /n/fs/raft-depth/RAFT-Stereo/datasets/SintelStereo/sdk/python/sintel_io.py
+def readDispSintelStereo(file_name):
+    a = np.array(Image.open(file_name))
+    d_r, d_g, d_b = np.split(a, axis=2, indices_or_sections=3)
+    disp = (d_r * 4 + d_g / (2**6) + d_b / (2**14))[..., 0]
+    mask = np.array(Image.open(file_name.replace('disparities', 'occlusions')))
+    valid = ((mask == 0) & (disp > 0))
+    return disp, valid
+
+# Method taken from https://research.nvidia.com/sites/default/files/pubs/2018-06_Falling-Things/readme_0.txt
+def readDispFallingThings(file_name):
+    a = np.array(Image.open(file_name))
+    with open('/'.join(file_name.split('/')[:-1] + ['_camera_settings.json']), 'r') as f:
+        intrinsics = json.load(f)
+    fx = intrinsics['camera_settings'][0]['intrinsic_settings']['fx']
+    disp = (fx * 6.0 * 100) / a.astype(np.float32)
+    valid = disp > 0
+    return disp, valid
+
+# Method taken from https://github.com/castacks/tartanair_tools/blob/master/data_type.md
+def readDispTartanAir(file_name):
+    depth = np.load(file_name)
+    disp = 80.0 / depth
+    valid = disp > 0
+    return disp, valid
+
+
+def readDispMiddlebury(file_name):
+    assert basename(file_name) == 'disp0GT.pfm'
+    disp = readPFM(file_name).astype(np.float32)
+    assert len(disp.shape) == 2
+    nocc_pix = file_name.replace('disp0GT.pfm', 'mask0nocc.png')
+    assert exists(nocc_pix)
+    nocc_pix = imageio.imread(nocc_pix) == 255
+    assert np.any(nocc_pix)
+    return disp, nocc_pix
 
 def writeFlowKITTI(filename, uv):
     uv = 64.0 * uv + 2**15

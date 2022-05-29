@@ -1,6 +1,10 @@
 import numpy as np
 import random
-import math
+import warnings
+import os
+import time
+from glob import glob
+from skimage import color, io
 from PIL import Image
 
 import cv2
@@ -8,28 +12,70 @@ cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
 import torch
-from torchvision.transforms import ColorJitter
+from torchvision.transforms import ColorJitter, functional, Compose
 import torch.nn.functional as F
 
+def get_middlebury_images():
+    root = "datasets/Middlebury/MiddEval3"
+    with open(os.path.join(root, "official_train.txt"), 'r') as f:
+        lines = f.read().splitlines()
+    return sorted([os.path.join(root, 'trainingQ', f'{name}/im0.png') for name in lines])
+
+def get_eth3d_images():
+    return sorted(glob('datasets/ETH3D/two_view_training/*/im0.png'))
+
+def get_kitti_images():
+    return sorted(glob('datasets/KITTI/training/image_2/*_10.png'))
+
+def transfer_color(image, style_mean, style_stddev):
+    reference_image_lab = color.rgb2lab(image)
+    reference_stddev = np.std(reference_image_lab, axis=(0,1), keepdims=True)# + 1
+    reference_mean = np.mean(reference_image_lab, axis=(0,1), keepdims=True)
+
+    reference_image_lab = reference_image_lab - reference_mean
+    lamb = style_stddev/reference_stddev
+    style_image_lab = lamb * reference_image_lab
+    output_image_lab = style_image_lab + style_mean
+    l, a, b = np.split(output_image_lab, 3, axis=2)
+    l = l.clip(0, 100)
+    output_image_lab = np.concatenate((l,a,b), axis=2)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        output_image_rgb = color.lab2rgb(output_image_lab) * 255
+        return output_image_rgb
+
+class AdjustGamma(object):
+
+    def __init__(self, gamma_min, gamma_max, gain_min=1.0, gain_max=1.0):
+        self.gamma_min, self.gamma_max, self.gain_min, self.gain_max = gamma_min, gamma_max, gain_min, gain_max
+
+    def __call__(self, sample):
+        gain = random.uniform(self.gain_min, self.gain_max)
+        gamma = random.uniform(self.gamma_min, self.gamma_max)
+        return functional.adjust_gamma(sample, gamma, gain)
+
+    def __repr__(self):
+        return f"Adjust Gamma {self.gamma_min}, ({self.gamma_max}) and Gain ({self.gain_min}, {self.gain_max})"
 
 class FlowAugmentor:
-    def __init__(self, crop_size, min_scale=-0.2, max_scale=0.5, do_flip=True):
-        
+    def __init__(self, crop_size, min_scale=-0.2, max_scale=0.5, do_flip=True, yjitter=False, saturation_range=[0.6,1.4], gamma=[1,1,1,1]):
+
         # spatial augmentation params
         self.crop_size = crop_size
         self.min_scale = min_scale
         self.max_scale = max_scale
-        self.spatial_aug_prob = 0.8
+        self.spatial_aug_prob = 1.0
         self.stretch_prob = 0.8
         self.max_stretch = 0.2
 
         # flip augmentation params
+        self.yjitter = yjitter
         self.do_flip = do_flip
         self.h_flip_prob = 0.5
         self.v_flip_prob = 0.1
 
         # photometric augmentation params
-        self.photo_aug = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.5/3.14)
+        self.photo_aug = Compose([ColorJitter(brightness=0.4, contrast=0.4, saturation=saturation_range, hue=0.5/3.14), AdjustGamma(*gamma)])
         self.asymmetric_color_aug_prob = 0.2
         self.eraser_aug_prob = 0.5
 
@@ -89,24 +135,40 @@ class FlowAugmentor:
             flow = flow * [scale_x, scale_y]
 
         if self.do_flip:
-            if np.random.rand() < self.h_flip_prob: # h-flip
+            if np.random.rand() < self.h_flip_prob and self.do_flip == 'hf': # h-flip
                 img1 = img1[:, ::-1]
                 img2 = img2[:, ::-1]
                 flow = flow[:, ::-1] * [-1.0, 1.0]
 
-            if np.random.rand() < self.v_flip_prob: # v-flip
+            if np.random.rand() < self.h_flip_prob and self.do_flip == 'h': # h-flip for stereo
+                tmp = img1[:, ::-1]
+                img1 = img2[:, ::-1]
+                img2 = tmp
+
+            if np.random.rand() < self.v_flip_prob and self.do_flip == 'v': # v-flip
                 img1 = img1[::-1, :]
                 img2 = img2[::-1, :]
                 flow = flow[::-1, :] * [1.0, -1.0]
 
-        y0 = np.random.randint(0, img1.shape[0] - self.crop_size[0])
-        x0 = np.random.randint(0, img1.shape[1] - self.crop_size[1])
-        
-        img1 = img1[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
-        img2 = img2[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
-        flow = flow[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
+        if self.yjitter:
+            y0 = np.random.randint(2, img1.shape[0] - self.crop_size[0] - 2)
+            x0 = np.random.randint(2, img1.shape[1] - self.crop_size[1] - 2)
+
+            y1 = y0 + np.random.randint(-2, 2 + 1)
+            img1 = img1[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
+            img2 = img2[y1:y1+self.crop_size[0], x0:x0+self.crop_size[1]]
+            flow = flow[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
+
+        else:
+            y0 = np.random.randint(0, img1.shape[0] - self.crop_size[0])
+            x0 = np.random.randint(0, img1.shape[1] - self.crop_size[1])
+            
+            img1 = img1[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
+            img2 = img2[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
+            flow = flow[y0:y0+self.crop_size[0], x0:x0+self.crop_size[1]]
 
         return img1, img2, flow
+
 
     def __call__(self, img1, img2, flow):
         img1, img2 = self.color_transform(img1, img2)
@@ -120,7 +182,7 @@ class FlowAugmentor:
         return img1, img2, flow
 
 class SparseFlowAugmentor:
-    def __init__(self, crop_size, min_scale=-0.2, max_scale=0.5, do_flip=False):
+    def __init__(self, crop_size, min_scale=-0.2, max_scale=0.5, do_flip=False, yjitter=False, saturation_range=[0.7,1.3], gamma=[1,1,1,1]):
         # spatial augmentation params
         self.crop_size = crop_size
         self.min_scale = min_scale
@@ -135,7 +197,7 @@ class SparseFlowAugmentor:
         self.v_flip_prob = 0.1
 
         # photometric augmentation params
-        self.photo_aug = ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3/3.14)
+        self.photo_aug = Compose([ColorJitter(brightness=0.3, contrast=0.3, saturation=saturation_range, hue=0.3/3.14), AdjustGamma(*gamma)])
         self.asymmetric_color_aug_prob = 0.2
         self.eraser_aug_prob = 0.5
         
@@ -211,11 +273,20 @@ class SparseFlowAugmentor:
             flow, valid = self.resize_sparse_flow_map(flow, valid, fx=scale_x, fy=scale_y)
 
         if self.do_flip:
-            if np.random.rand() < 0.5: # h-flip
+            if np.random.rand() < self.h_flip_prob and self.do_flip == 'hf': # h-flip
                 img1 = img1[:, ::-1]
                 img2 = img2[:, ::-1]
                 flow = flow[:, ::-1] * [-1.0, 1.0]
-                valid = valid[:, ::-1]
+
+            if np.random.rand() < self.h_flip_prob and self.do_flip == 'h': # h-flip for stereo
+                tmp = img1[:, ::-1]
+                img1 = img2[:, ::-1]
+                img2 = tmp
+
+            if np.random.rand() < self.v_flip_prob and self.do_flip == 'v': # v-flip
+                img1 = img1[::-1, :]
+                img2 = img2[::-1, :]
+                flow = flow[::-1, :] * [1.0, -1.0]
 
         margin_y = 20
         margin_x = 50
