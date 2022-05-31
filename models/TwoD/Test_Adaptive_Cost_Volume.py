@@ -17,6 +17,7 @@ from models.TwoD.disp_residual import upsample_convex8,upsample_simple8
 from models.TwoD.vit import ViT,TransformerEncoder
 from timm.models.layers import trunc_normal_
 from models.backbone.swinformer import BasicLayer
+from models.TwoD.dynamic_cost_volume import DynamicCostVolumeRefinement
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -27,12 +28,14 @@ def print_tensor_shape(inputs):
 
 
 class LowCNN(nn.Module):
-    def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
-                 upsample_type="simple"):
+    def __init__(self, max_disp=192,cost_volume_type='correlation',
+                 upsample_type="simple",adaptive_refinement=False):
         super(LowCNN, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
         self.upsample_type = upsample_type
+        # whether using adaptive cost volume for refinement
+        self.adaptive_refinement = adaptive_refinement
         
         if self.upsample_type:
             self.upsample_mask = ConvAffinityUpsample(input_channels=256,hidden_channels=128)
@@ -62,6 +65,11 @@ class LowCNN(nn.Module):
         # 1/8 Scale Disparity Estimation
         self.disp_estimation3 = DisparityEstimation(max_disp=192//8,match_similarity=match_similarity) 
 
+        # adaptive cost volume refinement
+        if self.adaptive_refinement:
+            self.dynamic_cost_volume_refinement_module = DynamicCostVolumeRefinement(input_channels=260,normalized_scale=1)
+        
+        
         # weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv3d):
@@ -117,6 +125,19 @@ class LowCNN(nn.Module):
         # Predict Disparity Here
         low_scale_disp3 = low_scale_disp3.unsqueeze(1)
         
+        # def forward(self,left_feature,right_feature,disp,left_image,right_image):
+        if self.adaptive_refinement:
+            cur_left = F.interpolate(left,size=[low_scale_disp3.size(-2),low_scale_disp3.size(-1)],
+                                     mode='bilinear',align_corners=False)
+            cur_right = F.interpolate(right,size=[low_scale_disp3.size(-2),low_scale_disp3.size(-1)],
+                                      mode='bilinear',align_corners=False)
+            disparity_results = self.dynamic_cost_volume_refinement_module(aggregated_feature_l,
+                                                                         aggregated_feature_r,
+                                                                         low_scale_disp3,
+                                                                         cur_left,
+                                                                         cur_right)
+            low_scale_disp3 = disparity_results['disp']
+        
         if self.upsample_type=='convex':
             pr3_mask = self.upsample_mask(aggregated_feature_l)
             pr0 = upsample_convex8(low_scale_disp3,pr3_mask)
@@ -131,7 +152,7 @@ if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex').cuda()
+    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex',adaptive_refinement=False).cuda()
     output = lowCNN(left_image,right_image,True)
     
     print(output.shape)

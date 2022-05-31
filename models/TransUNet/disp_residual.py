@@ -86,7 +86,8 @@ class BaseLayer(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn = nn.BatchNorm2d(dim_out)
-        self.relu = nn.GELU()
+        # self.relu = nn.GELU()
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         x = self.conv(x)
@@ -99,7 +100,7 @@ class TransformerConcated(nn.Module):
     def __init__(self,swin_feature_list):
         super().__init__()
         self.swin_feature_list = swin_feature_list
-        self.relu = nn.GELU()
+        # self.relu = nn.GELU()
         self.up_sample = nn.UpsamplingBilinear2d(scale_factor=2)
         self.ch_list = list(reversed(self.swin_feature_list))
         

@@ -265,7 +265,11 @@ class DynamicCostVolumeRefinement(nn.Module):
         # Update the disparity        
         disp = self.relu0(disp + residual)
         
-        return disp,adaptive_cost_volume_narrow,complete_valid_mask
+        return { 'disp': residual,
+                'adaptive_cost_volume': adaptive_cost_volume_narrow,
+                'complete_valid_mask': complete_valid_mask,
+                'lower_bound': lower_bound,
+                'upper_bound': upper_bound  }
         
         
 
@@ -282,8 +286,8 @@ if __name__=="__main__":
     
     dynamic_cost_volume = DynamicCostVolumeRefinement(input_channels=132,normalized_scale=1).cuda()
     
-    refined_disp,_,_ = dynamic_cost_volume(left_feature,right_feature,disp,left_image,right_image)
+    results = dynamic_cost_volume(left_feature,right_feature,disp,left_image,right_image)
     
-    print(refined_disp.shape)
+    print(results.keys())
     
     
