@@ -145,7 +145,7 @@ class LowCNN(nn.Module):
             pr0 = upsample_simple8(low_scale_disp3)
         
         if self.adaptive_refinement:
-            return pr0,disparity_results['lower_bound'],disparity_results['upper_bound']
+            return pr0,disparity_results['lower_bound'],disparity_results['upper_bound'],low_scale_disp3
         
         return pr0
 
@@ -162,8 +162,9 @@ if __name__=="__main__":
     if not use_adaptive_refinement:
         output = lowCNN(left_image,right_image,True)
     else:
-        output, lower_map,upper_map = lowCNN(left_image,right_image,True)
+        output, lower_map,upper_map,disp3 = lowCNN(left_image,right_image,True)
         print(lower_map.shape)
         print(upper_map.shape)
+        print(disp3.shape)
         
     print(output.shape)

@@ -57,7 +57,13 @@ class Searching_Range_Loss(nn.Module):
         If alpha is smaller and smaller, the searching range will smaller and smaller. '''
         self.alpha = alpha
         
-    def forward(self,pred_disp,gt_disp,lower_map,upper_map):
+    def forward(self,pred_disp,gt_disp,lower_map,upper_map,disp3):
+        
+        if disp3.size(-1)!=gt_disp.size(-1):
+            scale = gt_disp.size(-1)//disp3.size(-1)
+            pred_disp = disp3
+            
+        gt_disp = F.interpolate(disp3,size=[disp3.size(-2),disp3.size(-1)],mode='bilinear',align_corners=False)*1.0/scale
         
         # Obtain the penity loss Here
         lower_threshold = pred_disp - lower_map
@@ -103,14 +109,15 @@ class TotalLoss(nn.Module):
         
         
         
-    def forward(self,pred_disp,gt_disp,lower_offset_map=None,upper_offset_map=None):
+    def forward(self,pred_disp,gt_disp,lower_offset_map=None,upper_offset_map=None,disp3=None):
         
         disp_loss = self.disp_loss(pred_disp,gt_disp)
         
         if self.disp_only:
             return disp_loss
         
-        searching_range_loss = self.searching_range_loss(pred_disp,gt_disp,lower_offset_map,upper_offset_map)
+       
+        searching_range_loss = self.searching_range_loss(pred_disp,gt_disp,lower_offset_map,upper_offset_map,disp3)
         
         total_loss = disp_loss * self.disp_emphasis + 1.0 * searching_range_loss
         
