@@ -144,6 +144,9 @@ class LowCNN(nn.Module):
         elif self.upsample_type=='simple':
             pr0 = upsample_simple8(low_scale_disp3)
         
+        if self.adaptive_refinement:
+            return pr0,disparity_results['lower_bound'],disparity_results['upper_bound']
+        
         return pr0
 
 
@@ -152,7 +155,15 @@ if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex',adaptive_refinement=False).cuda()
-    output = lowCNN(left_image,right_image,True)
+    use_adaptive_refinement = True
+    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex',
+                    adaptive_refinement=use_adaptive_refinement).cuda()
     
+    if not use_adaptive_refinement:
+        output = lowCNN(left_image,right_image,True)
+    else:
+        output, lower_map,upper_map = lowCNN(left_image,right_image,True)
+        print(lower_map.shape)
+        print(upper_map.shape)
+        
     print(output.shape)

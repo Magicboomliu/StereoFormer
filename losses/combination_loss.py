@@ -90,31 +90,28 @@ class Searching_Range_Loss(nn.Module):
 
 # TOTAL LOSS COMBINATIONS
 class TotalLoss(nn.Module):
-    def __init__(self,disp_mode='Smooth_l1',alpha=0.9,disp_emphasis=3.0):
+    def __init__(self,disp_mode='Smooth_l1',alpha=0.9,disp_emphasis=3.0,
+                 disp_only=False):
         super(TotalLoss,self).__init__()
         self.alpha = alpha
         self.disp_emphasis = disp_emphasis
+        self.disp_only = disp_only
         # Disp Loss
-        self.disp_loss = SingleScaleLoss(loss='Smooth_l1')
+        self.disp_loss = SingleScaleLoss(loss=disp_mode)
         
         self.searching_range_loss = Searching_Range_Loss(alpha=self.alpha)
         
         
         
-    def forward(self,pred_disp,gt_disp,lower_offset_map,upper_offset_map):
+    def forward(self,pred_disp,gt_disp,lower_offset_map=None,upper_offset_map=None):
         
         disp_loss = self.disp_loss(pred_disp,gt_disp)
+        
+        if self.disp_only:
+            return disp_loss
         
         searching_range_loss = self.searching_range_loss(pred_disp,gt_disp,lower_offset_map,upper_offset_map)
         
         total_loss = disp_loss * self.disp_emphasis + 1.0 * searching_range_loss
         
         return total_loss
-        
-
-
-
-
-
-
-
