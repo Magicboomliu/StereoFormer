@@ -5,12 +5,11 @@ import datetime
 import random
 import torch
 import logging
+import shutil
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from utils.common import *
-
-from train_file.trainer_low import DisparityTrainer
-from losses.single_disp_loss import singlescaleloss
+from train_file.trainer_LC import DisparityTrainer
 from torch.utils.tensorboard import SummaryWriter
 
 cudnn.benchmark = True
@@ -48,9 +47,7 @@ def main(opt):
     iterations = 0
     
     for r in range(opt.startRound, train_round):
-        
-        criterion = singlescaleloss(loss='Smooth_l1')
-        trainer.set_criterion(criterion)
+
         end_epoch = epoches[r]
 
         logger.info('round %d: %s' % (r, str(loss_weights[r])))
