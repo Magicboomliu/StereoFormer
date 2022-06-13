@@ -20,10 +20,12 @@ from losses.multi_disp_loss import EPE_Loss
 from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
-from models.LocalCostVolume.baseline import LowCNN
+#from models.LocalCostVolume.baseline import LowCNN
 # from models.LocalCostVolume.baseline_variance import LowCNN
+from models.LocalCostVolume.baseline_dynamic import LowCNN
 from losses.combination_loss import TotalLoss
 from losses.multi_equal_loss import multiequalloss
+
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]

@@ -96,7 +96,7 @@ class PureLearningLocalCostVolume(nn.Module):
         if cur_disp.size(-1)!=left_image.size(-1):
             cur_left_image = F.interpolate(left_image,size=[cur_disp.size(-2),cur_disp.size(-1)],
                                            mode='bilinear',align_corners=False)
-            cur_right_image = F.interpolate(right_image,size=[cur_disparity.size(-2),cur_disparity.size(-1)],
+            cur_right_image = F.interpolate(right_image,size=[cur_disp.size(-2),cur_disp.size(-1)],
                                             mode='bilinear',align_corners=False)
         else:
             cur_left_image = left_image
@@ -130,7 +130,7 @@ class PureLearningLocalCostVolume(nn.Module):
         # New Sampling Points
         sampling_candidates = lower_bound + sampling_candiate_intervals
         if consider_valid:
-          sampling_candidates = sampling_candidates * (1-invalid_mask) + invalid_mask * cur_disparity.repeat(1,self.sample_points+1,1,1)        
+          sampling_candidates = sampling_candidates * (1-invalid_mask) + invalid_mask * cur_disp.repeat(1,self.sample_points+1,1,1)        
         
         # Get Cost Volume Here
         local_cost_volume = build_cost_volume_from_volume(old_cost_volume,sampling_candidates)
