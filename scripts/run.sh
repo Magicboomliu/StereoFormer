@@ -2,9 +2,9 @@
 LowCNN(){
 cd ..
 loss=config/loss_config_disp.json
-outf_model=models_saved/lowCNN_simple
-logf=logs/LowCNN_simple
-datapath=/media/zliu/datagrid1/liu/sceneflow
+outf_model=models_saved/lowCNN_localCosTVolume_Variance_samples20
+logf=logs/lowCNN_localCosTVolume_Variance_samples20
+datapath=/mnt/hdd8TB/liu/sceneflow
 datathread=4
 lr=1e-3
 devices=0
@@ -13,11 +13,11 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=4
-testbatch=2
+batchSize=8
+testbatch=8
 maxdisp=-1
 model=none
-save_logdir=experiments_logdir/LowCNN_simple
+save_logdir=experiments_logdir/lowCNN_localCosTVolume_Variance_samples20
 model=LowCNN_ada
 pretrain=none
 
