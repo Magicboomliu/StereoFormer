@@ -44,8 +44,6 @@ class LocalCostVolume(nn.Module):
         if consider_valid:
           sampling_candidates = sampling_candidates * (1-invalid_mask) + invalid_mask * cur_disparity.repeat(1,self.sample_points+1,1,1)
         # Get Cost Volume Here
-        
-
         local_cost_volume = build_cost_volume_from_volume(old_cost_volume,sampling_candidates)
 
         # Get Score Map Here

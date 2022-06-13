@@ -21,6 +21,7 @@ from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.LocalCostVolume.baseline import LowCNN
+# from models.LocalCostVolume.baseline_variance import LowCNN
 from losses.combination_loss import TotalLoss
 from losses.multi_equal_loss import multiequalloss
 
@@ -145,14 +146,17 @@ class DisparityTrainer(object):
         if epoch > 19:
             times = (epoch - 10) // 10 * 2
             cur_lr = self.lr / times
+        elif epoch >20 and epoch<40:
+            cur_lr = 1e-4
+        elif epoch >=40 and epoch<60:
+            cur_lr = 4e-5
         else:
-            cur_lr = self.lr
+            cur_lr = 1e-5
 
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = cur_lr
         self.current_lr = cur_lr
         return cur_lr
-
 
 
     def train_one_epoch(self, epoch, round,iterations,summary_writer):
@@ -193,8 +197,6 @@ class DisparityTrainer(object):
                 output_list = self.net(left_input, right_input,True)
                 loss = self.total_loss(output_list,target_disp)
                 output = output_list[-1]
-
-            
 
             if type(loss) is list or type(loss) is tuple:
                 loss = np.sum(loss)
