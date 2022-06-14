@@ -9,7 +9,8 @@ import shutil
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from utils.common import *
-from train_file.trainer_LC import DisparityTrainer
+# from train_file.trainer_LC import DisparityTrainer
+from train_file.train_DLC import DisparityTrainer
 from torch.utils.tensorboard import SummaryWriter
 
 cudnn.benchmark = True

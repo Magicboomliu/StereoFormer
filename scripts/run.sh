@@ -4,7 +4,7 @@ cd ..
 loss=config/loss_config_disp.json
 outf_model=models_saved/lowCNN_localCosTVolume_Variance_samples20
 logf=logs/lowCNN_localCosTVolume_Variance_samples20
-datapath=/mnt/hdd8TB/liu/sceneflow
+datapath=/media/zliu/datagrid1/liu/sceneflow
 datathread=4
 lr=1e-3
 devices=0
@@ -13,7 +13,7 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=8
+batchSize=4
 testbatch=8
 maxdisp=-1
 model=none
