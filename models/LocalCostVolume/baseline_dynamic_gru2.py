@@ -14,7 +14,7 @@ from models.utils.feature_fusion import TransformerConcated
 from utils.devtools import print_tensor_shape
 from models.BasicBlocks.resnet import ResBlock
 from timm.models.layers import trunc_normal_
-from models.LocalCostVolume.Attempts.update import DisparityUpdateDLCWithMask
+from models.LocalCostVolume.Attempts.updatev2 import DisparityUpdateDLCWithMask
 
 
 
@@ -38,6 +38,7 @@ class LowCNN(nn.Module):
         
         if self.adaptive_refinement and self.upsample_type:
             self.local_cost_volume = DisparityUpdateDLCWithMask(input_channels=self.max_disp//8,hidden_dim=32,
+                                                                feature_dim=64,
                                                         sample_points=20)
 
         
@@ -111,6 +112,7 @@ class LowCNN(nn.Module):
         aggregated_feature_r = self.feature_concated(right_feature_list)
         
         # Correlation Cost Volume Here 1/8 : Searching Range is 24
+        
         low_scale_cost_volume3 = self.low_scale_cost_volume(aggregated_feature_l,aggregated_feature_r)
         low_scale_cost_volume3 = self.correlation_aggreagtion(low_scale_cost_volume3)
         final_cost = low_scale_cost_volume3
@@ -127,9 +129,9 @@ class LowCNN(nn.Module):
         
         for itr in range(iters):
             if itr ==0:
-                disp,hidden_state,mask = self.local_cost_volume(final_cost,low_scale_disp3,left,right,None,True)
+                disp,hidden_state,mask = self.local_cost_volume(final_cost,low_scale_disp3,left,right,None,aggregated_feature_l,True)
             else:
-                disp,hidden_state,mask = self.local_cost_volume(final_cost,disp,left,right,hidden_state,True)
+                disp,hidden_state,mask = self.local_cost_volume(final_cost,disp,left,right,hidden_state,aggregated_feature_l,True)
             
             if self.upsample_type=="convex":
                 full_disp = upsample_convex8(disp,mask)
@@ -156,6 +158,9 @@ if __name__=="__main__":
     
     for f in output:
         print(f.shape)
+    
+    
+        
     
     
         
