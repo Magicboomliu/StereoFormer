@@ -74,7 +74,6 @@ class SmallUNet(nn.Module):
         
         return upper_bound,offset_bound
 
-
 # Pure Local Cost Volume
 class PureLearningLocalCostVolume(nn.Module):
     def __init__(self,sample_points=10):

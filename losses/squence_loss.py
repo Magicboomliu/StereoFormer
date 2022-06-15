@@ -3,35 +3,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def sequence_loss(pred_disp,gt_disp,loss_gamma=0.9,max_disp=192):
+def sequence_loss(pred_disp_list,gt_disp,gamma=0.8,max_dispariy=192):
+    n_predictions = len(pred_disp_list)    
+    total_loss = 0.0
     
-    N_predictions = len(pred_disp)
-    assert N_predictions >0
+    mask1 = (gt_disp<192).float()
+    mask2 = (gt_disp>0).float()
+    mask = mask1 * mask2
+    for i in range(n_predictions):
+        i_weight =  gamma**(n_predictions - i - 1)
+        i_loss = (pred_disp_list[i]*mask - gt_disp *mask).abs()
+        total_loss += (i_weight * i_loss).mean()
     
-    disp_loss = 0.0
-    
-    valid_mask = (gt_disp>0)*(gt_disp<max_disp)
-    valid_mask = valid_mask.type_as(gt_disp)
-    
-    pred_disp = [p * valid_mask for p in pred_disp]
-    
-    for i in range(N_predictions):
-        assert not torch.isnan(pred_disp[i]).any() and not torch.isinf(pred_disp[i]).any()
-        # We adjust the loss_gamma so it is consistent for any number of RAFT-Stereo iterations
-        adjusted_loss_gamma = loss_gamma**(15/(N_predictions - 1))
-        i_weight = adjusted_loss_gamma**(N_predictions - i - 1)
-        i_loss = (pred_disp[i] - gt_disp).abs()
-        disp_loss += i_weight * i_loss[valid_mask.bool()].mean()
+    return total_loss
 
 
-    # epe = torch.sum((pred_disp[-1] - gt_disp)**2, dim=1).sqrt()
-    # epe = epe.view(-1)[valid_mask.view(-1)]
+# End-Point-Error 
+def EPE_Loss(disp_infer,disp_gt):
+    mask = (disp_gt>0) & (disp_gt<192)
+    disp_infer = disp_infer[mask]
+    disp_gt = disp_gt[mask]
+    return F.l1_loss(disp_infer,disp_gt,size_average=True)
 
-    # metrics = {
-    #     'epe': epe.mean().item(),
-    #     '1px': (epe < 1).float().mean().item(),
-    #     '3px': (epe < 3).float().mean().item(),
-    #     '5px': (epe < 5).float().mean().item(),
-    # }
-
-    return disp_loss
+        
+    
