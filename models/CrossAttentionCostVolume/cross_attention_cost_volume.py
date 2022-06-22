@@ -10,10 +10,7 @@ from models.utils.build_cost_volume import CostVolume
 from models.utils.estimation import DisparityEstimation
 from models.utils.disp_residual import conv
 from models.utils.feature_fusion import TransformerConcated
-from utils.devtools import print_tensor_shape
 from models.BasicBlocks.resnet import ResBlock
-from timm.models.layers import trunc_normal_
-from models.LocalCostVolume.Attempts.fixed_local_cost_volume import LocalCostVolume
 
 
 class LowCNN(nn.Module):

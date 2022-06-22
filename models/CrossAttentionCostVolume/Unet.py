@@ -41,6 +41,7 @@ class RB(nn.Module):
         x = x + self.shortcut(identity)
         x = self.relu_out(x)
         return x
+
 class Up(nn.Module):
     """
     Up Convolution Block
@@ -68,11 +69,18 @@ class Up(nn.Module):
             )
         else:
             assert 'Upsample is not in [bilinear, deconv]'
+            
     def forward(self, x):
         x = self.up(x)
         return x
+    
+    
+
 class UNet(nn.Module):
-    def __init__(self, input_nc=3, output_nc=3, norm_layer=nn.BatchNorm2d, downsample='conv', upsample='deconv',
+    def __init__(self, input_nc=3, output_nc=3, 
+                 norm_layer=nn.BatchNorm2d, 
+                 downsample='conv', 
+                 upsample='deconv',
                  leaky=True, nb_channel=32):
         super(UNet, self).__init__()
         filters = [nb_channel, nb_channel * 2, nb_channel * 4, nb_channel * 8]
@@ -94,9 +102,6 @@ class UNet(nn.Module):
         else:
             relu = nn.ReLU
             param = [True]
-        # self.Conv_input = nn.Sequential(nn.Conv2d(input_nc, self.filters[0], kernel_size=3, stride=1, padding=1),
-        #                                 nn.BatchNorm2d(self.filters[0]),
-        #                                 relu(*param))
         self.Conv_input = nn.Sequential(nn.Conv2d(input_nc, self.filters[0], kernel_size=7, stride=1, padding=3),
                                         norm_layer(self.filters[0]),
                                         relu(*param))
@@ -114,27 +119,60 @@ class UNet(nn.Module):
         self.Up_conv2 = RB(self.filters[0], self.filters[0], norm_layer, leaky=leaky, change_channel_nb=False)
         self.Up_conv2_2 = RB(self.filters[0], self.filters[0], norm_layer, leaky=leaky, change_channel_nb=False)
         self.Conv = nn.Conv2d(self.filters[0], output_nc, kernel_size=1, stride=1, padding=0)
+
+
     def forward(self, input):
+        
+        # Specific the inputs
         x = input
         x_in = x
-        x_in = self.Conv_input(x_in)
-        e1 = self.Conv1(x_in)
-        e2 = self.downsample1(e1)
+        
+        # First Convolution
+        x_in = self.Conv_input(x_in) # Full Resolution : [B,num_dim,H,W]
+        
+        
+        e1 = self.Conv1(x_in)  #[B,num_dim,H,W]
+        e2 = self.downsample1(e1) #[B,num_dim,H//2,W//2]
+
+        
         e2 = self.Conv2(e2)
-        e3 = self.downsample2(e2)
+        e3 = self.downsample2(e2) #[B,num_dim,H//4,W//4]
+    
+        
         e3 = self.Conv3(e3)
-        e4 = self.downsample3(e3)
+        e4 = self.downsample3(e3)  #[B,num_dim,H//8,W//8]
+        
         e4 = self.Conv4(e4)
-        d4 = self.Up4(e4)
+        
+        d4 = self.Up4(e4) #[H//4,W//4]
         d4 = self.Up_conv4(d4) + self.Up_conv4_2(e3)
+        
         d3 = self.Up3(d4)
         d3 = self.Up_conv3(d3) + self.Up_conv3_2(e2)
+        
         d2 = self.Up2(d3)
         d2 = self.Up_conv2(d2) + self.Up_conv2_2(e1)
+        
         out_res = self.Conv(d2)
+        
         x = out_res
         return x
 
+
+if __name__=="__main__":
+    
+    input_tensor = torch.randn(1,3,320,640).cuda()
+
+    unet = UNet(input_nc=3,output_nc=1,
+                norm_layer=nn.BatchNorm2d,
+                downsample='conv',
+                upsample='deconv',
+                leaky=True,
+                nb_channel=32).cuda()
+    
+    outputs = unet(input_tensor)
+    
+    # print(outputs.shape)
 
 
 
