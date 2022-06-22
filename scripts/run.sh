@@ -1,33 +1,38 @@
-swin_former_cls(){
+
+LowCNN(){
 cd ..
-cd train_file
+loss=config/loss_config_disp.json
+outf_model=models_saved/lowCNN_localCosTVolume_Variance_samples20
+logf=logs/lowCNN_localCosTVolume_Variance_samples20
+datapath=/media/zliu/datagrid1/liu/sceneflow
+datathread=4
+lr=1e-3
+devices=0
+dataset=sceneflow
+trainlist=filenames/SceneFlow.list
+vallist=filenames/FlyingThings3D_release_TEST.list
+startR=0
+startE=0
+batchSize=4
+testbatch=8
+maxdisp=-1
+model=none
+save_logdir=experiments_logdir/lowCNN_localCosTVolume_Variance_samples20
+model=LowCNN_ada
+pretrain=none
 
-data_path=/media/zliu/datagrid1/liu/flower_photos
-type=classification
-in_channels=3
-patch_size=4
-window_size=7
-embedding_dim=96
-num_classes=1000
-epochs=100
-batch_size=4
-lr=1e-4
-weights=/home/zliu/Desktop/Codes/StereoFormer/pretrained/swin_tiny_patch4_window7_224.pth
-
-
-
-python -W ignore classification.py --type $type \
-                                    --in_channels $in_channels \
-                                    --patch_size $patch_size \
-                                    --window_size $window_size \
-                                    --num_classes $num_classes \
-                                    --embedding_dim $embedding_dim \
-                                    --epochs $epochs \
-                                    --batch_size $batch_size \
-                                    --lr $lr \
-                                    --weights $weights \
-                                    --data_path $data_path
-
+python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
+               --outf $outf_model --logFile $logf \
+               --devices $devices --batch_size $batchSize \
+               --dataset $dataset --trainlist $trainlist --vallist $vallist \
+               --startRound $startR --startEpoch $startE \
+               --model $model \
+               --maxdisp $maxdisp \
+               --datapath $datapath \
+               --manualSeed 1024 --test_batch $testbatch \
+               --save_logdir $save_logdir \
+               --pretrain $pretrain  
 }
 
-swin_former_cls
+
+LowCNN
