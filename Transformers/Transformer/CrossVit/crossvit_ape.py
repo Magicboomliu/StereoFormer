@@ -215,13 +215,16 @@ class BasicCrossVitBlock(nn.Module):
         for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(
-                    [ Transformer(dim=embed_dim[0],dropout=dropout,depth=image1_enc_depths,
+                    [ 
+                    Transformer(dim=embed_dim[0],dropout=dropout,depth=image1_enc_depths,
                                   heads=image1_enc_heads,dim_head=image1_dim_head,
                                   mlp_dim=image1_mlp_dim),
-                     Transformer(dim=embed_dim[1],depth=image2_enc_depths,
+                    
+                    Transformer(dim=embed_dim[1],depth=image2_enc_depths,
                                  heads=image2_enc_heads,dim_head=image2_dim_head,
                                  mlp_dim=image2_mlp_dim),
-                      CrossTransformer(image1_dim=embed_dim[0],image2_dim=embed_dim[1],
+                    
+                    CrossTransformer(image1_dim=embed_dim[0],image2_dim=embed_dim[1],
                                        depth=cross_attn_depth,heads=cross_attn_heads,
                                        dim_head=cross_attn_dim_head,
                                        dropout=dropout)
@@ -365,7 +368,7 @@ class CrossVit(nn.Module):
         # Make Cross Attention
         feat1_tokens, feat2_tokens = self.basic_cross_transformer(feat1_tokens,feat2_tokens)
         
-        # feature fusion
+        # feature fusion [B,nums_tokenis,C]
         feat_fusion = feat1_tokens + feat2_tokens
         
         # Reshape To Image View

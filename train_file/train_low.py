@@ -17,6 +17,7 @@ from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.CrossAttentionCostVolume.baseline_new import Baseline
 from models.CrossAttentionCostVolume.baseline_ca import Baseline_ca
+from models.CrossAttentionCostVolume.baseline_trans import Baseline_trans
 
 
 # ImageNet Normalization
@@ -94,6 +95,9 @@ class DisparityTrainer(object):
                         upsample_type='simple').cuda()
         elif self.model == 'Baseline_ca':
             self.net = Baseline_ca(max_disp=192,cost_volume_type='group_ca',
+                        upsample_type='simple').cuda()
+        elif self.model == 'Baseline_trans':
+            self.net = Baseline_trans(max_disp=192,cost_volume_type='correlation',
                         upsample_type='simple').cuda()
         else:
             raise NotImplementedError
