@@ -3,10 +3,10 @@ sys.path.append("../..")
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from TransformerLZH.Transformer.SwinTransformer.PatchEmbedding import PatchEmbed
-from TransformerLZH.Transformer.SwinTransformer.PatchMerging import PatchMerging
+from Transformers.Transformer.SwinTransformer.PatchEmbedding import PatchEmbed
+from Transformers.Transformer.SwinTransformer.PatchMerging import PatchMerging
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from TransformerLZH.Transformer.SwinTransformer.BasicBlock import BasicLayer
+from Transformers.Transformer.SwinTransformer.BasicBlock import BasicLayer
 
 class MySwinFormerBlocks(nn.Module):
     def __init__(self,

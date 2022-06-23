@@ -13,8 +13,8 @@ from models.utils.feature_fusion import TransformerConcated
 from models.BasicBlocks.resnet import ResBlock
 from timm.models.layers import trunc_normal_
 from models.CrossAttentionCostVolume.gwc_cost_volume import build_gwc_volume
-from TransformerLZH.Transformer.CrossVit.crossvit_ape import CrossVit
-from TransformerLZH.Transformer.SwinTransformer.MySwinBlocks import MySwinFormerBlocks
+from Transformers.Transformer.CrossVit.crossvit_ape import CrossVit
+from Transformers.Transformer.SwinTransformer.MySwinBlocks import MySwinFormerBlocks
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -223,7 +223,7 @@ class Baseline_ca(nn.Module):
             groupwise_cost_volume = build_gwc_volume(aggregated_feature_l,aggregated_feature_r,maxdisp=192//8,num_groups=self.nums_groups)
             cost_volume_list = torch.chunk(groupwise_cost_volume,self.nums_groups,dim=1)
             cost_volume_list = [c.squeeze(1) for c in cost_volume_list]
-            cost_volume = self.low_scale_cost_volume(cost_volume_list)
+            cost_volume = self.low_scale_cost_volume(cost_volume_list,aggregated_feature_l,aggregated_feature_r)
             aggregated_cost_volume = self.cost_volume_aggregation(cost_volume)
             final_cost_volume = aggregated_cost_volume[-1]
             

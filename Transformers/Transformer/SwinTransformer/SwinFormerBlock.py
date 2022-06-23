@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import sys
 sys.path.append("../..")
-from TransformerLZH.Transformer.SwinTransformer.Window_Part_Reverse import window_partition,window_reverse
+from Transformers.Transformer.SwinTransformer.Window_Part_Reverse import window_partition,window_reverse
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from TransformerLZH.Transformer.SwinTransformer.MLP import Mlp
-from TransformerLZH.Transformer.SwinTransformer.Attention import WindowAttention
+from Transformers.Transformer.SwinTransformer.MLP import Mlp
+from Transformers.Transformer.SwinTransformer.Attention import WindowAttention
 
 
 

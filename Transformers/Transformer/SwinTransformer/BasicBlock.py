@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from TransformerLZH.Transformer.SwinTransformer.SwinFormerBlock import SwinTransformerBlock
-from TransformerLZH.Transformer.SwinTransformer.Window_Part_Reverse import window_partition,window_reverse
+from Transformers.Transformer.SwinTransformer.SwinFormerBlock import SwinTransformerBlock
+from Transformers.Transformer.SwinTransformer.Window_Part_Reverse import window_partition,window_reverse
 import torch.utils.checkpoint as checkpoint
 import numpy as np
 
