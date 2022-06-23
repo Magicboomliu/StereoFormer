@@ -23,10 +23,10 @@ def print_tensor_shape(inputs):
 
 
 
-class LowCNN(nn.Module):
+class Baseline(nn.Module):
     def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
                  upsample_type="simple"):
-        super(LowCNN, self).__init__()
+        super(Baseline, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
         self.upsample_type = upsample_type

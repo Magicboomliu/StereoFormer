@@ -145,6 +145,7 @@ class Baseline_ca(nn.Module):
 
         self.conv_aggreagtion = nn.Sequential(
             ResBlock(24,24,3,1),
+            ResBlock(24,24,3,1),
             ResBlock(24,24,3,1)
         )
         
@@ -156,7 +157,7 @@ class Baseline_ca(nn.Module):
             self.nums_groups = 4
             self.low_scale_cost_volume = CascadeGroupWiseCostVolumeAggregation(
                                                                             cost_volume_length=self.nums_groups,
-                                                                            include_old_cost_volume=False,
+                                                                            include_old_cost_volume=True,
                                                                             image_size=[320//8,640//8],
                                                                             input_cost_volume_channels=192//8)
             

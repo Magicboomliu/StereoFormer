@@ -50,12 +50,12 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=4
+batchSize=2
 testbatch=8
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/Fuck
-model=Baseline
+model=Baseline_ca
 pretrain=none
 
 python3 -W ignore train.py --cuda --loss $loss --lr $lr \
