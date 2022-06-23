@@ -15,7 +15,8 @@ from losses.multi_disp_loss import EPE_Loss
 from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
-from models.CrossAttentionCostVolume.baseline import Baseline
+from models.CrossAttentionCostVolume.baseline_new import Baseline
+from models.CrossAttentionCostVolume.baseline_ca import Baseline_ca
 
 
 # ImageNet Normalization
@@ -90,6 +91,9 @@ class DisparityTrainer(object):
         # Build the Network architecture according to the model name
         if self.model == 'Baseline':
             self.net = Baseline(max_disp=192,cost_volume_type='correlation',
+                        upsample_type='simple').cuda()
+        elif self.model == 'Baseline_ca':
+            self.net = Baseline_ca(max_disp=192,cost_volume_type='group_ca',
                         upsample_type='simple').cuda()
         else:
             raise NotImplementedError
