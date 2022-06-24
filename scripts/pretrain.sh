@@ -178,9 +178,9 @@ python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
 LowCNN(){
 cd ..
 loss=config/loss_config_disp.json
-outf_model=models_saved/lowCNN
-logf=logs/LowCNN
-datapath=/media/zliu/datagrid1/liu/sceneflow
+outf_model=models_saved/lowCNNsss
+logf=logs/LowCNNsss
+datapath=/data3/liu/sceneflow
 datathread=4
 lr=1e-3
 devices=0
@@ -193,7 +193,7 @@ batchSize=8
 testbatch=8
 maxdisp=-1
 model=none
-save_logdir=experiments_logdir/LowCNN
+save_logdir=experiments_logdir/LowCNNsss
 model=LowCNN
 pretrain=none
 
