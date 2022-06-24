@@ -189,12 +189,12 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=8
+batchSize=1
 testbatch=8
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/LowCNN
-model=LowCNN
+model=Att
 pretrain=none
 
 python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
@@ -246,7 +246,6 @@ python3 -W ignore train_iter.py --cuda --loss $loss --lr $lr \
 }
 
 
-
 LowCNN_test2(){
 cd ..
 loss=config/loss_config_disp.json
@@ -284,9 +283,9 @@ python3 -W ignore ttt.py --cuda --loss $loss --lr $lr \
 
 
 
-
+LowCNN
 # Raft_stereo
-LowCNN_test2
+# LowCNN_test2
 # HRNet_StereoNet_Sf
 #Swin_T_StereoNet_Sf
 # HRNet_GWc_Sf

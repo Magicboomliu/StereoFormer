@@ -18,7 +18,9 @@ from dataloader import transforms
 from models.TransUNet.baseline_transUNet import TransUNetStereo
 # from models.TwoD.simple_2d_low import LowCNN
 from models.TwoD.stereo import LowCNN
+from models.CostVolumeTrans.baseline_ca import Baseline_CA
 from models.TwoD.Simple_2d_low_exp import NiNet
+from models.CostVolumeTrans.CostVolumeAttention import Baseline_Att
 
 
 # ImageNet Normalization
@@ -93,10 +95,14 @@ class DisparityTrainer(object):
         # Build the Network architecture according to the model name
         if self.model == 'TransUnet': 
             self.net = TransUNetStereo(cost_volume_type='correlation')
+        elif self.model =="GroupCrossAttention":
+            self.net = Baseline_CA(cost_volume_type='groups',upsample_type='convex')
         elif self.model=='LowCNN':
             self.net= LowCNN(cost_volume_type='correlation',upsample_type='convex')
         elif self.model =='NiNet':
             self.net = NiNet(squeezed_volume=True,upsample_type='convex')
+        elif self.model =='Att':
+            self.net = Baseline_Att(max_disp=192//8,cost_volume_type='correlation_wo_mean',upsample_type='convex')
         else:
             raise NotImplementedError
         self.is_pretrain = False
