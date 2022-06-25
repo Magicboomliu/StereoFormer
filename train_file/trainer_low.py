@@ -21,7 +21,7 @@ from models.TwoD.stereo import LowCNN
 from models.CostVolumeTrans.baseline_ca import Baseline_CA
 from models.TwoD.Simple_2d_low_exp import NiNet
 from models.CostVolumeTrans.CostVolumeAttention import Baseline_Att
-
+from models.CostVolumeTrans.baseline_se import BaselineSE
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -103,6 +103,8 @@ class DisparityTrainer(object):
             self.net = NiNet(squeezed_volume=True,upsample_type='convex')
         elif self.model =='Att':
             self.net = Baseline_Att(max_disp=192//8,cost_volume_type='correlation_wo_mean',upsample_type='convex')
+        elif self.model =='BaselineSE':
+            self.net = BaselineSE(max_disp=192//8,cost_volume_type='correlation_wo_mean',upsample_type='convex')
         else:
             raise NotImplementedError
         self.is_pretrain = False

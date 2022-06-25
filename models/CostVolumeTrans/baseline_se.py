@@ -17,6 +17,7 @@ from models.TwoD.disp_residual import upsample_convex8,upsample_simple8
 from models.TwoD.vit import ViT,TransformerEncoder
 from timm.models.layers import trunc_normal_
 from models.backbone.swinformer import BasicLayer
+from models.CostVolumeTrans.attention.SE_attention import CostWiseSEAttention
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -53,10 +54,10 @@ class LinearEmbedding(nn.Module):
         return x
 
 
-class LowCNN(nn.Module):
+class BaselineSE(nn.Module):
     def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
                  upsample_type="simple"):
-        super(LowCNN, self).__init__()
+        super(BaselineSE, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
         self.upsample_type = upsample_type
@@ -122,7 +123,6 @@ class LowCNN(nn.Module):
         self.feature_concated = TransformerConcated(swin_feature_list=[256,512,512])
         match_similarity = True
         
-        #self.cost_attention = SA_Module(input_nc=192//8,output_nc=192//8,ndf=192//8)
         
         self.correlation_aggregation = nn.Sequential(
             ResBlock(24,24,3,1),
@@ -133,8 +133,10 @@ class LowCNN(nn.Module):
         # 1/8 Scale Cost Volume
         if self.cost_volume_type in ['correlation','concated']:
             self.low_scale_cost_volume = CostVolume(max_disp=192//8,feature_similarity=self.cost_volume_type)
-        elif self.cost_volume_type in ['group_wise_correlation']:
-            self.low_scale_cost_volume = GroupWiseCorrelationCostVolume(max_disp=192//8,groups=16,is_concated=True)
+        elif self.cost_volume_type in ['correlation_wo_mean']:
+            self.low_scale_cost_volume = CostVolume(max_disp=192//8,feature_similarity=self.cost_volume_type)
+            self.cost_channels_aggregation = CostWiseSEAttention(max_disp=192//8,channels=256,
+                                                                 reduction=16,squeeze_type='conv3d')
     
         # 1/8 Scale Disparity Estimation
         self.disp_estimation3 = DisparityEstimation(max_disp=192//8,match_similarity=match_similarity) 
@@ -196,17 +198,18 @@ class LowCNN(nn.Module):
         feature8_r = self.downsample1(conv3_r) # 1/8 L
         feature16_r = self.downsample2(feature8_r) # 1/16 L
         feature32_r = self.downsample3(feature16_r) # 1/32 L
-        
         right_feature_list = [feature32_r,feature16_r,feature8_r]
         aggregated_feature_r = self.feature_concated(right_feature_list)
         
         # Correlation Cost Volume Here 1/8 : Searching Range is 24
         low_scale_cost_volume3 = self.low_scale_cost_volume(aggregated_feature_l,aggregated_feature_r)
         
+        if self.cost_volume_type=='correlation_wo_mean':
+            low_scale_cost_volume3 = self.cost_channels_aggregation(low_scale_cost_volume3)
+
+            
         # Transformer Based value
-        linear_cost = self.linear_embedding(low_scale_cost_volume3)
-        print("Linear Cost Shape: ",linear_cost.shape)
-        
+        linear_cost = self.linear_embedding(low_scale_cost_volume3)      
         cost_f = linear_cost
         Wh, Ww = low_scale_cost_volume3.size(2),low_scale_cost_volume3.size(3)
         # Transformer Aggregation
@@ -221,8 +224,7 @@ class LowCNN(nn.Module):
                 cost_out = norm_layer(cost_out)
                 cost_out = cost_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
         
-        
-        final_cost = cost_out + low_scale_cost_volume3
+        final_cost = cost_out
 
         final_cost = self.correlation_aggregation(final_cost)
         
@@ -242,26 +244,6 @@ class LowCNN(nn.Module):
         return pr0
 
 
-# Spatial Attention
-class SA_Module(nn.Module):
-    def __init__(self, input_nc, output_nc=1, ndf=32):
-        super(SA_Module, self).__init__()
-        self.attention_value = nn.Sequential(
-            nn.Conv2d(input_nc, ndf, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(ndf),
-            nn.ReLU(True),
-            nn.Conv2d(ndf, ndf, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(ndf),
-            nn.ReLU(True),
-            nn.Conv2d(ndf, output_nc, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.Sigmoid()
-        )
-    
-    def forward(self, x):
-        attention_value = self.attention_value(x)
-        return attention_value
-
-
 
 
 
@@ -269,7 +251,7 @@ if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex').cuda()
+    lowCNN = BaselineSE(cost_volume_type='correlation_wo_mean',upsample_type='convex').cuda()
     output = lowCNN(left_image,right_image,True)
     
     print(output.shape)

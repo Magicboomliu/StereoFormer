@@ -189,12 +189,12 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=1
+batchSize=4
 testbatch=8
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/LowCNN
-model=Att
+model=BaselineSE
 pretrain=none
 
 python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
