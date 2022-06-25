@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 import sys
-sys.path.append("../..")
-from positional_encoding.absolute_sincos_embedding import positionalencoding2d,positionalencoding1d
+sys.path.append("../../..")
+from Transformers.positional_encoding.absolute_sincos_embedding import positionalencoding1d,positionalencoding2d
 
 # classes
 class PreNorm(nn.Module):
@@ -134,6 +134,8 @@ class ViT(nn.Module):
         elif self.ape =='sincos1d':
             self.pos_embedding = positionalencoding1d(d_model=self.embedd_dim,length=num_patches).cuda().unsqueeze(0)
             self.pos_embedding.requires_grad = False
+        elif self.ape =='none':
+            pass
         else:
             raise NotImplementedError
             
@@ -150,8 +152,9 @@ class ViT(nn.Module):
         x = self.to_patch_embedding(img)
         b,n,_ = x.shape
         
-        # Add absolute positional 
-        x+= self.pos_embedding
+        # Add absolute positional
+        if self.ape!='none':
+            x+= self.pos_embedding
         x = self.dropout(x)
         
         # Some transformer Blocks
@@ -159,7 +162,7 @@ class ViT(nn.Module):
         
         x = x.permute(0,2,1).view(B,-1,H//self.patch_size[0],W//self.patch_size[1])
 
-        print(x.shape)
+        return x
 
 if __name__=="__main__":
     
@@ -167,7 +170,7 @@ if __name__=="__main__":
     
     vit = ViT(image_size=(40,80),patch_size=(1,1),heads=(2,4,4),dim_head=64,depths=3,
               embedd_dim=512,mlp_dim=256,input_channels=128,dropout_rate=0.,emb_dropout=0.,
-              ape='sincos1d').cuda()
+              ape='none').cuda()
     
     vit(image)
     
