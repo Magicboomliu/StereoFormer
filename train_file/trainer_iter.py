@@ -16,6 +16,7 @@ from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
 from models.GMA_Stereo.GMA_Stereo import GMAStereo
+from models.GMA_Stereo.Raft_Stereo import RaftStereo
 from losses.disparity_sequence_loss import sequence_loss
 
 # ImageNet Normalization
@@ -91,6 +92,8 @@ class DisparityTrainer(object):
         # Build the Network architecture according to the model name
         if self.model == 'CMAStereo':
             self.net = GMAStereo(dropout=0.,max_disp=192,radius=2,num_levels=3) 
+        elif self.model =='RAFTStereo':
+            self.net = RaftStereo(dropout=0.,max_disp=192,radius=2,num_levels=3)
         else:
             raise NotImplementedError
         self.is_pretrain = False
@@ -180,7 +183,7 @@ class DisparityTrainer(object):
             if type(loss) is list or type(loss) is tuple:
                 loss = np.sum(loss)
             if type(output) is list or type(output) is tuple: 
-                flow2_EPE = self.epe(output[0], target_disp)
+                flow2_EPE = self.epe(output[-1], target_disp)
                 
             else:
                 if output.size(-1)!= target_disp.size(-1):
@@ -244,7 +247,7 @@ class DisparityTrainer(object):
                 
                 start_time = time.perf_counter()
                 # Get the predicted disparity
-                output= self.net(left_input, right_input,iters=12,test_mode=True)
+                cur_disp,output= self.net(left_input, right_input,iters=12,test_mode=True)
                 inference_time += time.perf_counter() - start_time
                 img_nums += left_input.shape[0]
                 
