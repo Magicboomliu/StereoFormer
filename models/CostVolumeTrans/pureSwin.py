@@ -12,11 +12,10 @@ from utils.devtools import print_tensor_shape
 from models.residual.resnet import ResBlock
 from models.TransUNet.build_cost_volume import CostVolume
 from models.TransUNet.estimation import DisparityEstimation
-from models.TransUNet.GWcCostVolume import build_concat_volume,build_gwc_volume,conv3d,StereoNetAggregation
 from models.TwoD.disp_residual import upsample_convex8,upsample_simple8
-from models.TwoD.vit import ViT,TransformerEncoder
 from timm.models.layers import trunc_normal_
 from models.backbone.swinformer import BasicLayer
+from models.CostVolumeTrans.attention.Swin_Attention import SwinTransformerBlock
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -53,24 +52,37 @@ class LinearEmbedding(nn.Module):
         return x
 
 
-class LowCNN(nn.Module):
+class Baseline_TransOnly(nn.Module):
     def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
                  upsample_type="simple"):
-        super(LowCNN, self).__init__()
+        super(Baseline_TransOnly, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
         self.upsample_type = upsample_type
         
         if self.upsample_type:
             self.upsample_mask = ConvAffinityUpsample(input_channels=256,hidden_channels=128)
+            
+            
         
         self.conv1 = conv(3, 64, 7, 2)                      # 1/2
         self.conv2 = ResBlock(64, 128, stride=2)            # 1/4
         self.conv3 = ResBlock(128, 256, stride=2)           # 1/8
         
-        self.downsample1 = ResBlock(256,256,stride=1) # 1/8
-        self.downsample2 = ResBlock(256,512,stride=2) # 1/16
-        self.downsample3 = ResBlock(512,512,stride=2) # 1/32
+
+        # Transformer Staff
+        self.myswin_former_encoder = SwinTransformerBlock(swin_former_depths=[4,4,4],
+                                       input_dimension=256,
+                                       embedd_dim=256,
+                                       norm_layer=nn.LayerNorm,
+                                       window_size=8,
+                                       nums_head=[4,8,4],
+                                       out_indices=(0,1,2),
+                                       downsample=True,
+                                       mlp_ratio=4,
+                                       qk_scale=None,
+                                       qkv_bias=True,
+                                       attn_drop_rate=0)
         
 
         # Swin Former Blocks
@@ -119,10 +131,8 @@ class LowCNN(nn.Module):
             self.add_module(layer_name, layer)
             
         
-        self.feature_concated = TransformerConcated(swin_feature_list=[256,512,512])
+        self.feature_concated = TransformerConcated(swin_feature_list=[256,512,1024])
         match_similarity = True
-        
-        #self.cost_attention = SA_Module(input_nc=192//8,output_nc=192//8,ndf=192//8)
         
         self.correlation_aggregation = nn.Sequential(
             ResBlock(24,24,3,1),
@@ -184,21 +194,12 @@ class LowCNN(nn.Module):
         conv3_r = self.conv3(conv2_r)           # 1/8
         
         # Left Feature
-        feature8_l = self.downsample1(conv3_l) # 1/8 L
-        feature16_l = self.downsample2(feature8_l) # 1/16 L
-        feature32_l = self.downsample3(feature16_l) # 1/32 L
-        
-        left_feature_list = [feature32_l,feature16_l,feature8_l]
-        
-        aggregated_feature_l = self.feature_concated(left_feature_list)
+        trans_l = self.myswin_former_encoder(conv3_l)
+        aggregated_feature_l = self.feature_concated(trans_l[::-1])
         
         # Right Feature
-        feature8_r = self.downsample1(conv3_r) # 1/8 L
-        feature16_r = self.downsample2(feature8_r) # 1/16 L
-        feature32_r = self.downsample3(feature16_r) # 1/32 L
-        
-        right_feature_list = [feature32_r,feature16_r,feature8_r]
-        aggregated_feature_r = self.feature_concated(right_feature_list)
+        trans_r = self.myswin_former_encoder(conv3_r)
+        aggregated_feature_r = self.feature_concated(trans_r[::-1])
         
         # Correlation Cost Volume Here 1/8 : Searching Range is 24
         low_scale_cost_volume3 = self.low_scale_cost_volume(aggregated_feature_l,aggregated_feature_r)
@@ -221,7 +222,7 @@ class LowCNN(nn.Module):
                 cost_out = cost_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
         
         
-        final_cost = cost_out + low_scale_cost_volume3
+        final_cost = cost_out
 
         final_cost = self.correlation_aggregation(final_cost)
         
@@ -232,7 +233,7 @@ class LowCNN(nn.Module):
         low_scale_disp3 = low_scale_disp3.unsqueeze(1)
         
         if self.upsample_type=='convex':
-            pr3_mask = self.upsample_mask(aggregated_feature_l)
+            pr3_mask = self.upsample_mask(conv3_l)
             pr0 = upsample_convex8(low_scale_disp3,pr3_mask)
         elif self.upsample_type=='simple':
             pr0 = upsample_simple8(low_scale_disp3)
@@ -262,13 +263,11 @@ class SA_Module(nn.Module):
 
 
 
-
-
 if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex').cuda()
+    lowCNN = Baseline_TransOnly(cost_volume_type='correlation',upsample_type='convex').cuda()
     output = lowCNN(left_image,right_image,True)
     
     print(output.shape)

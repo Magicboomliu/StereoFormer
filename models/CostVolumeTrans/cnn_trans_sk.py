@@ -1,3 +1,4 @@
+from doctest import SkipDocTestCase
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,11 +13,86 @@ from utils.devtools import print_tensor_shape
 from models.residual.resnet import ResBlock
 from models.TransUNet.build_cost_volume import CostVolume
 from models.TransUNet.estimation import DisparityEstimation
-from models.TransUNet.GWcCostVolume import build_concat_volume,build_gwc_volume,conv3d,StereoNetAggregation
 from models.TwoD.disp_residual import upsample_convex8,upsample_simple8
 from models.TwoD.vit import ViT,TransformerEncoder
 from timm.models.layers import trunc_normal_
 from models.backbone.swinformer import BasicLayer
+from models.CostVolumeTrans.attention.Swin_Attention import SwinTransformerBlock
+from models.CostVolumeTrans.attention.CBAM import CBAMBlock
+
+class SKAttention(nn.Module):
+    def __init__(self,channels = 256,kernels=2,reduction=16,groups=1,L=32):
+        super(SKAttention,self).__init__()
+        self.d=max(L,channels//reduction)
+        self.fc=nn.Linear(channels,self.d)
+        self.fcs=nn.ModuleList([])
+        for i in range(kernels):
+            self.fcs.append(nn.Linear(self.d,channels))
+        self.softmax=nn.Softmax(dim=0)
+        
+    def forward(self,feature1,feature2):
+        conv_outs = [feature1,feature2]
+        bs, c, _, _ = feature1.size()
+        feats=torch.stack(conv_outs,0)#k,bs,channel,h,w
+        
+        ### fuse
+        U=sum(conv_outs) #bs,c,h,w
+        
+        ### reduction channel
+        S=U.mean(-1).mean(-1) #bs,c
+        Z=self.fc(S) #bs,d
+
+        ### calculate attention weight
+        weights=[]
+        for fc in self.fcs:
+            weight=fc(Z)
+            weights.append(weight.view(bs,c,1,1)) #bs,channel
+        attention_weughts=torch.stack(weights,0)#k,bs,channel,1,1
+        attention_weughts=self.softmax(attention_weughts)#k,bs,channel,1,1
+        
+        ### fuse
+        V=(attention_weughts*feats).sum(0)
+        return V
+
+
+class CBAMFusion(nn.Module):
+    def __init__(self,in_channels=256):
+        super(CBAMBlock,self).__init__()
+        self.cbam1 = CBAMBlock(channel=256,reduction=16)
+        self.cbam2 = CBAMBlock(channel=256,reduction=16)
+        self.fusion = ResBlock(in_channels,in_channels,3,1)
+
+    
+    def forward(self,left_feature,right_feature):
+        
+        feat1 = self.cbam1(left_feature)
+        feat2 = self.cbam2(right_feature)
+        feat = feat1+ feat2
+        
+        x = self.fusion(feat)
+        return x
+class ConcatedDirectly(nn.Module):
+    def __init__(self,in_channels=256):
+        super(ConcatedDirectly,self).__init__()
+        self.fusion = ResBlock(in_channels*2,in_channels,3,1)
+    
+    def forward(self,feature1,feature2):
+        
+        feat = torch.cat((feature1,feature2),dim=1)
+        
+        x = self.fusion(feat)
+        return x
+
+
+class SummationDirectly(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self,feature1,feature2):
+        return feature1 + feature2
+
+
+
+
 
 def print_tensor_shape(inputs):
     if isinstance(inputs,list) or isinstance(inputs,tuple):
@@ -53,13 +129,23 @@ class LinearEmbedding(nn.Module):
         return x
 
 
-class LowCNN(nn.Module):
+class Baseline_Fusion(nn.Module):
     def __init__(self, max_disp=192,cost_volume_type='group_wise_correlation',
-                 upsample_type="simple"):
-        super(LowCNN, self).__init__()
+                 upsample_type="simple",fusion='sk'):
+        super(Baseline_Fusion, self).__init__()
         self.max_disp = max_disp
         self.cost_volume_type = cost_volume_type
         self.upsample_type = upsample_type
+        self.fusion = fusion
+        
+        if self.fusion =='sk':
+            self.feat_fusion = SKAttention(channels=256,kernels=2,reduction=16)
+        elif self.fusion=='concate':
+            self.feat_fusion = ConcatedDirectly(in_channels=256)
+        elif self.fusion =='sum':
+            self.feat_fusion = SummationDirectly() 
+        elif self.fusion =='cbam':
+            self.feat_fusion = CBAMFusion(in_channels=256)
         
         if self.upsample_type:
             self.upsample_mask = ConvAffinityUpsample(input_channels=256,hidden_channels=128)
@@ -68,11 +154,26 @@ class LowCNN(nn.Module):
         self.conv2 = ResBlock(64, 128, stride=2)            # 1/4
         self.conv3 = ResBlock(128, 256, stride=2)           # 1/8
         
+        
+        # After the Resoluation CNN statf
         self.downsample1 = ResBlock(256,256,stride=1) # 1/8
         self.downsample2 = ResBlock(256,512,stride=2) # 1/16
         self.downsample3 = ResBlock(512,512,stride=2) # 1/32
         
-
+        # Transformer Staff
+        self.myswin_former_encoder = SwinTransformerBlock(swin_former_depths=[4,4,4],
+                                       input_dimension=256,
+                                       embedd_dim=256,
+                                       norm_layer=nn.LayerNorm,
+                                       window_size=8,
+                                       nums_head=[4,8,4],
+                                       out_indices=(0,1,2),
+                                       downsample=True,
+                                       mlp_ratio=4,
+                                       qk_scale=None,
+                                       qkv_bias=True,
+                                       attn_drop_rate=0)
+        
         # Swin Former Blocks
         swin_former_depths=[4,4,4]
         drop_path_rate =0.2 
@@ -120,6 +221,9 @@ class LowCNN(nn.Module):
             
         
         self.feature_concated = TransformerConcated(swin_feature_list=[256,512,512])
+        
+        self.trans_feature_concated = TransformerConcated(swin_feature_list=[256,512,1024])
+        
         match_similarity = True
         
         #self.cost_attention = SA_Module(input_nc=192//8,output_nc=192//8,ndf=192//8)
@@ -183,6 +287,16 @@ class LowCNN(nn.Module):
         conv2_r = self.conv2(conv1_r)
         conv3_r = self.conv3(conv2_r)           # 1/8
         
+        # Swin-Former Left and Right Feature
+        trans_l = self.myswin_former_encoder(conv3_l)
+        trans_r = self.myswin_former_encoder(conv3_r)     
+        trans_l = trans_l[::-1]
+        trans_r = trans_r[::-1]
+        aggregated_feature_l_trans = self.trans_feature_concated(trans_l)
+        aggregated_feature_r_trans = self.trans_feature_concated(trans_r)
+
+   
+        
         # Left Feature
         feature8_l = self.downsample1(conv3_l) # 1/8 L
         feature16_l = self.downsample2(feature8_l) # 1/16 L
@@ -200,12 +314,16 @@ class LowCNN(nn.Module):
         right_feature_list = [feature32_r,feature16_r,feature8_r]
         aggregated_feature_r = self.feature_concated(right_feature_list)
         
+        # Swin-CNN Feature_fusion
+        aggregated_feature_l = self.feat_fusion(aggregated_feature_l,aggregated_feature_l_trans)
+        aggregated_feature_r = self.feat_fusion(aggregated_feature_r,aggregated_feature_r_trans)
+        
+        
         # Correlation Cost Volume Here 1/8 : Searching Range is 24
         low_scale_cost_volume3 = self.low_scale_cost_volume(aggregated_feature_l,aggregated_feature_r)
         
         # Transformer Based value
-        linear_cost = self.linear_embedding(low_scale_cost_volume3)
-        
+        linear_cost = self.linear_embedding(low_scale_cost_volume3)        
         cost_f = linear_cost
         Wh, Ww = low_scale_cost_volume3.size(2),low_scale_cost_volume3.size(3)
         # Transformer Aggregation
@@ -221,7 +339,7 @@ class LowCNN(nn.Module):
                 cost_out = cost_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
         
         
-        final_cost = cost_out + low_scale_cost_volume3
+        final_cost = cost_out
 
         final_cost = self.correlation_aggregation(final_cost)
         
@@ -263,12 +381,11 @@ class SA_Module(nn.Module):
 
 
 
-
 if __name__=="__main__":
     left_image = torch.randn(1,3,320,640).cuda()
     right_image = torch.randn(1,3,320,640).cuda()
     
-    lowCNN = LowCNN(cost_volume_type='correlation',upsample_type='convex').cuda()
+    lowCNN = Baseline_Fusion(cost_volume_type='correlation',upsample_type='convex',fusion='sk').cuda()
     output = lowCNN(left_image,right_image,True)
     
     print(output.shape)

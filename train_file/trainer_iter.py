@@ -15,18 +15,13 @@ from losses.multi_disp_loss import EPE_Loss
 from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
-from models.TransUNet.baseline_transUNet import TransUNetStereo
-# from models.TwoD.simple_2d_low import LowCNN
-from models.TwoD.stereo import LowCNN
-from models.CostVolumeTrans.baseline_ca import Baseline_CA
-from models.TwoD.Simple_2d_low_exp import NiNet
-from models.CostVolumeTrans.CostVolumeAttention import Baseline_Att
-from models.CostVolumeTrans.baseline_se2 import BaselineSE
-from models.CostVolumeTrans.pureSwin import Baseline_TransOnly
-from models.CostVolumeTrans.cnn_trans_sk import Baseline_Fusion
+from models.GMA_Stereo.GMA_Stereo import GMAStereo
+from losses.disparity_sequence_loss import sequence_loss
+
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
+
 
 class DisparityTrainer(object):
     def __init__(self, lr, devices, dataset, trainlist, vallist, datapath, 
@@ -94,22 +89,8 @@ class DisparityTrainer(object):
 
     def _build_net(self):
         # Build the Network architecture according to the model name
-        if self.model == 'TransUnet': 
-            self.net = TransUNetStereo(cost_volume_type='correlation')
-        elif self.model =="GroupCrossAttention":
-            self.net = Baseline_CA(cost_volume_type='groups',upsample_type='convex')
-        elif self.model=='LowCNN':
-            self.net= LowCNN(cost_volume_type='correlation',upsample_type='convex')
-        elif self.model =='NiNet':
-            self.net = NiNet(squeezed_volume=True,upsample_type='convex')
-        elif self.model =='Att':
-            self.net = Baseline_Att(max_disp=192//8,cost_volume_type='correlation_wo_mean',upsample_type='convex')
-        elif self.model =='BaselineSE':
-            self.net = BaselineSE(max_disp=192//8,cost_volume_type='correlation_wo_mean',upsample_type='convex')
-        elif self.model=='SwinOnly':
-            self.net= Baseline_TransOnly(cost_volume_type='correlation',upsample_type='convex')
-        elif self.model =='Fusion':
-            self.net = Baseline_Fusion(cost_volume_type='correlation',upsample_type='convex',fusion='cbam')
+        if self.model == 'CMAStereo':
+            self.net = GMAStereo(dropout=0.,max_disp=192,radius=2,num_levels=3) 
         else:
             raise NotImplementedError
         self.is_pretrain = False
@@ -164,8 +145,6 @@ class DisparityTrainer(object):
         self.current_lr = cur_lr
         return cur_lr
 
-    def set_criterion(self, criterion):
-        self.criterion = criterion
 
     def train_one_epoch(self, epoch, round,iterations,summary_writer):
         
@@ -194,12 +173,9 @@ class DisparityTrainer(object):
 
             self.optimizer.zero_grad()
             
-            # Inference Here
-            # Output Here is 1/8 Scale [B,1,40,80]
-            output = self.net(left_input, right_input,True)
+            output = self.net(left_input, right_input,iters=12)
             
-            # Get the Smooth L1 Loss here
-            loss = self.criterion(output, target_disp)
+            loss = sequence_loss(output,target_disp)
 
             if type(loss) is list or type(loss) is tuple:
                 loss = np.sum(loss)
@@ -268,7 +244,7 @@ class DisparityTrainer(object):
                 
                 start_time = time.perf_counter()
                 # Get the predicted disparity
-                output= self.net(left_input, right_input,False)
+                output= self.net(left_input, right_input,iters=12,test_mode=True)
                 inference_time += time.perf_counter() - start_time
                 img_nums += left_input.shape[0]
                 

@@ -189,12 +189,12 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=4
+batchSize=6
 testbatch=8
 maxdisp=-1
 model=none
 save_logdir=experiments_logdir/LowCNN
-model=BaselineSE
+model=SwinOnly
 pretrain=none
 
 python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
@@ -210,11 +210,11 @@ python3 -W ignore train_low.py --cuda --loss $loss --lr $lr \
                --pretrain $pretrain  
 }
 
-Raft_stereo(){
+CMAStereo(){
 cd ..
 loss=config/loss_config_disp.json
-outf_model=models_saved/ninet_trans
-logf=logs/ninet_trans
+outf_model=models_saved/CMAStereo
+logf=logs/CMAStereo
 datapath=/media/zliu/datagrid1/liu/sceneflow
 datathread=4
 lr=1e-3
@@ -224,12 +224,12 @@ trainlist=filenames/SceneFlow.list
 vallist=filenames/FlyingThings3D_release_TEST.list
 startR=0
 startE=0
-batchSize=1
-testbatch=1
+batchSize=4
+testbatch=8
 maxdisp=-1
 model=none
-save_logdir=experiments_logdir/ninet_trans
-model=RAFT
+save_logdir=experiments_logdir/LowCNN
+model=CMAStereo
 pretrain=none
 
 python3 -W ignore train_iter.py --cuda --loss $loss --lr $lr \
@@ -242,48 +242,11 @@ python3 -W ignore train_iter.py --cuda --loss $loss --lr $lr \
                --datapath $datapath \
                --manualSeed 1024 --test_batch $testbatch \
                --save_logdir $save_logdir \
-               --pretrain $pretrain   
-}
-
-
-LowCNN_test2(){
-cd ..
-loss=config/loss_config_disp.json
-outf_model=models_saved/lowCNN_simple
-logf=logs/LowCNN_simple
-datapath=/media/zliu/datagrid1/liu/sceneflow
-datathread=4
-lr=1e-3
-devices=0
-dataset=sceneflow
-trainlist=filenames/SceneFlow.list
-vallist=filenames/FlyingThings3D_release_TEST.list
-startR=0
-startE=0
-batchSize=4
-testbatch=2
-maxdisp=-1
-model=none
-save_logdir=experiments_logdir/LowCNN_simple
-model=LowCNN_ada
-pretrain=none
-
-python3 -W ignore ttt.py --cuda --loss $loss --lr $lr \
-               --outf $outf_model --logFile $logf \
-               --devices $devices --batch_size $batchSize \
-               --dataset $dataset --trainlist $trainlist --vallist $vallist \
-               --startRound $startR --startEpoch $startE \
-               --model $model \
-               --maxdisp $maxdisp \
-               --datapath $datapath \
-               --manualSeed 1024 --test_batch $testbatch \
-               --save_logdir $save_logdir \
                --pretrain $pretrain  
 }
 
-
-
-LowCNN
+CMAStereo
+# LowCNN
 # Raft_stereo
 # LowCNN_test2
 # HRNet_StereoNet_Sf
