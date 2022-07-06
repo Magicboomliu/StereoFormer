@@ -292,7 +292,7 @@ class Baseline_CA(nn.Module):
         right_feature_list = [feature32_r,feature16_r,feature8_r]
         aggregated_feature_r = self.feature_concated(right_feature_list)
         
-        # Correlation Cost Volume Here 1/8 : Searching Range is 24
+        # Correlation Cost Volume Here 1/8 : Searching Range is 24.
         if self.cost_volume_type=='groups':
             groupwise_cost_volume = build_gwc_volume(aggregated_feature_l,aggregated_feature_r,maxdisp=192//8,num_groups=self.nums_groups)
             cost_volume_list = torch.chunk(groupwise_cost_volume,self.nums_groups,dim=1)

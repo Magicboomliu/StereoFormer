@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.GMA_Stereo.core.gma import Aggregate
+from models.GMA_Stereo.Models.GMA_Stereo.core.gma import Aggregate
 
 
 
@@ -100,15 +100,16 @@ class BasicUpdateBlock(nn.Module):
         self.disp_head = DisparityHead(hidden_dim,hidden_dim=256)
         
         self.mask = nn.Sequential(
-            nn.Conv2d(128,256,3,padding=1),
+            nn.Conv2d(hidden_dim,256,3,padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(256,64*9,1,padding=0))
+            nn.Conv2d(256,4*9,1,padding=0))
         
     def forward(self,net,inp,corr,disp,upsample=True):
         
         motion_features = self.encoder(disp, corr)
         inp = torch.cat([inp, motion_features], dim=1)
 
+        
         net = self.gru(net, inp)
         delta_disp = self.disp_head(net)
 

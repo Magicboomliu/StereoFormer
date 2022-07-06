@@ -10,8 +10,8 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from utils.common import *
 # from train_file.trainer_3d import DisparityTrainer
-from train_file.trainer_2d import DisparityTrainer
-from losses.multi_disp_loss import multiscaleloss
+from train_file.trainer_iter_full import DisparityTrainer
+from losses.multi_scale_loss import multiscaleloss
 from torch.utils.tensorboard import SummaryWriter
 
 cudnn.benchmark = True
@@ -50,7 +50,7 @@ def main(opt):
     
     for r in range(opt.startRound, train_round):
 
-        criterion = multiscaleloss(loss_scale, 1, loss_weights[r], loss='Smooth_l1')
+        criterion = multiscaleloss(loss_scale, 1, loss_weights[r], loss='Smooth_l1', sparse=False)
         trainer.set_criterion(criterion)
         end_epoch = epoches[r]
 

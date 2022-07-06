@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 import sys
 sys.path.append("../")
@@ -15,9 +16,7 @@ from losses.multi_disp_loss import EPE_Loss
 from utils.metric import P1_metric
 from dataloader.SceneflowLoader import StereoDataset
 from dataloader import transforms
-from models.GMA_Stereo.GMA_Stereo import GMAStereo
-from models.GMA_Stereo.Raft_Stereo import RaftStereo
-from losses.disparity_sequence_loss import sequence_loss
+from models.GMA_Stereo.Models.GMA_Stereo.gma_stereo import GMAStereo
 
 # ImageNet Normalization
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -27,7 +26,7 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 class DisparityTrainer(object):
     def __init__(self, lr, devices, dataset, trainlist, vallist, datapath, 
                  batch_size, maxdisp,use_deform=False, pretrain=None, 
-                        model='LowCNN', test_batch=4):
+                        model='HRNet', test_batch=4):
         super(DisparityTrainer, self).__init__()
         
         self.lr = lr
@@ -90,12 +89,11 @@ class DisparityTrainer(object):
 
     def _build_net(self):
         # Build the Network architecture according to the model name
-        if self.model == 'CMAStereo':
-            self.net = GMAStereo(dropout=0.,max_disp=192,radius=2,num_levels=3) 
-        elif self.model =='RAFTStereo':
-            self.net = RaftStereo(dropout=0.,max_disp=192,radius=2,num_levels=3)
+        if self.model == 'RAFT': 
+            self.net = GMAStereo(dropout=0.,max_disp=192,radius=2,num_levels=3).cuda()
         else:
             raise NotImplementedError
+    
         self.is_pretrain = False
         if self.ngpu > 1:
             self.net = torch.nn.DataParallel(self.net, device_ids=self.devices).cuda()
@@ -112,6 +110,7 @@ class DisparityTrainer(object):
             # useful_dict ={k:v for k,v in ckpt['state_dict'].items() if k in current_model_dict.keys()}
             # current_model_dict.update(useful_dict)
             # self.net.load_state_dict(current_model_dict)
+
         else:
             if os.path.isfile(self.pretrain):
                 model_data = torch.load(self.pretrain)
@@ -148,6 +147,8 @@ class DisparityTrainer(object):
         self.current_lr = cur_lr
         return cur_lr
 
+    def set_criterion(self, criterion):
+        self.criterion = criterion
 
     def train_one_epoch(self, epoch, round,iterations,summary_writer):
         
@@ -167,7 +168,6 @@ class DisparityTrainer(object):
             left_input = torch.autograd.Variable(sample_batched['img_left'].cuda(), requires_grad=False)
             right_input = torch.autograd.Variable(sample_batched['img_right'].cuda(), requires_grad=False)
 
-            # Here the Traget disparity is [320*640]
             target_disp = sample_batched['gt_disp'].unsqueeze(1)
             target_disp = target_disp.cuda()
             target_disp = torch.autograd.Variable(target_disp, requires_grad=False)
@@ -176,20 +176,17 @@ class DisparityTrainer(object):
 
             self.optimizer.zero_grad()
             
-            output = self.net(left_input, right_input,iters=12)
-            
-            loss = sequence_loss(output,target_disp)
+            # Inference Here
+            output = self.net(left_input, right_input,disp_init=None,test_mode=False)
+            loss = self.criterion(output, target_disp,left_input,right_input)
 
             if type(loss) is list or type(loss) is tuple:
                 loss = np.sum(loss)
-            if type(output) is list or type(output) is tuple: 
-                flow2_EPE = self.epe(output[-1], target_disp)
+            if type(output) is list or type(output) is tuple:
+                
+                flow2_EPE = self.epe(output[0], target_disp)
                 
             else:
-                if output.size(-1)!= target_disp.size(-1):
-                    output = F.interpolate(output,scale_factor=8.0,mode='bilinear',align_corners=False) * 8.0
-                
-                assert (output.size(-1) == target_disp.size(-1))
                 flow2_EPE = self.epe(output, target_disp)
 
             # Record loss and EPE in the tfboard
@@ -247,13 +244,11 @@ class DisparityTrainer(object):
                 
                 start_time = time.perf_counter()
                 # Get the predicted disparity
-                cur_disp,output= self.net(left_input, right_input,iters=12,test_mode=True)
+                output= self.net(left_input, right_input,disp_init=None,test_mode=True)
+
                 inference_time += time.perf_counter() - start_time
                 img_nums += left_input.shape[0]
-                
-                # Here Need to be Modification
                 output = scale_disp(output, (output.size()[0], self.img_height, self.img_width))                
-                
                 loss = self.epe(output, target_disp)
                 flow2_EPE = self.epe(output, target_disp)
                 P1_error = self.p1_error(output, target_disp)
@@ -269,9 +264,11 @@ class DisparityTrainer(object):
             batch_time.update(time.time() - end)
             end = time.time()
             
+
             if i % 10 == 0:
                 logger.info('Test: [{0}/{1}]\t Time {2}\t EPE {3}'
                       .format(i, len(self.test_loader), batch_time.val, flow2_EPEs.val))
+
 
 
         logger.info(' * EPE {:.3f}'.format(flow2_EPEs.avg))

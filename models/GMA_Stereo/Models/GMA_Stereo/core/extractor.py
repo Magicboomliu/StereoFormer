@@ -167,23 +167,23 @@ class BasicEncoder(nn.Module):
         # if input is list, combine batch dimension
         is_list = isinstance(x, tuple) or isinstance(x, list)
         if is_list:
-            batch_dim = x[0].shape[0]
             x = torch.cat(x, dim=0)
 
         x = self.conv1(x)
         x = self.norm1(x)
         x = self.relu1(x)
-
+        conv_one_half_feat = x
+    
         x = self.layer1(x)
         x = self.layer2(x)
+        conv_one_fourth_feat = x
         x = self.layer3(x)
-
+        
         x = self.conv2(x)
-
+        conv_one_eight_feat  =x
+        
         if self.training and self.dropout is not None:
             x = self.dropout(x)
 
-        if is_list:
-            x = torch.split(x, [batch_dim, batch_dim], dim=0)
 
-        return x
+        return x,[conv_one_half_feat,conv_one_fourth_feat,conv_one_eight_feat]
